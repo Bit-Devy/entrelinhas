@@ -309,6 +309,21 @@ def main():
             passed('localizar e substituir')
             app.editor('let range;editor.state.doc.descendants((node,pos)=>{if(node.isText && node.text.startsWith("Algumas")) range={from:pos,to:pos+7}});editor.chain().focus().setTextSelection(range).run();return true')
             app.click('[aria-label="Ferramentas de formatação"]')
+            assert app.js('return document.querySelectorAll("[role=toolbar][aria-label=Formatação]").length') == 1
+            assert app.js('const tools=document.querySelector(".formatting"), r=tools.getBoundingClientRect(), editor=document.querySelector(".editor-scroll:not(.inactive)").getBoundingClientRect();return r.top>=editor.bottom && r.bottom<=innerHeight-30 && getComputedStyle(tools).borderTopWidth==="0px" && getComputedStyle(tools).boxShadow==="none"')
+            selection = app.editor('return {from:editor.state.selection.from,to:editor.state.selection.to}')
+            app.choose('Tamanho do texto selecionado', '24px')
+            assert app.editor('return editor.getAttributes("textStyle").fontSize') == '24px'
+            assert app.editor('return {from:editor.state.selection.from,to:editor.state.selection.to}') == selection
+            app.choose('Tamanho do texto selecionado', '')
+            app.click('[aria-label="Negrito (Ctrl+B)"]')
+            assert app.editor('return editor.isActive("bold")')
+            app.click('[aria-label="Negrito (Ctrl+B)"]')
+            app.choose('Estilo do parágrafo', '2')
+            assert app.editor('return editor.isActive("heading",{level:2})')
+            app.choose('Estilo do parágrafo', 'p')
+            app.screenshot(output / 'formatting-bottom.png')
+            passed('formatação inferior sem moldura e seletores preservam a seleção')
             app.click('[aria-label="Cor do texto"]')
             app.click('[aria-label="Usar cor #6f94b5"]')
             app.click('[role="dialog"][aria-label="Cor do texto"] .primary')

@@ -429,6 +429,17 @@ export default function App() {
     }
   }, [immersive, preferences.sidebarSide])
 
+  const selectionToolsVisible = Boolean(
+    selectionRect &&
+    preferences.selectionTools &&
+    !immersive &&
+    !settings &&
+    !find &&
+    !dialog.visible &&
+    !librarySearch &&
+    link === null,
+  )
+  const formattingVisible = toolbar || selectionToolsVisible
   const tabsVisible = notes.length > 1
   const newTabShortcut = Object.entries(preferences.shortcuts).some(
     ([action, shortcut]) => action !== 'new' && shortcut === 'Ctrl+T',
@@ -703,7 +714,11 @@ export default function App() {
               <IconButton
                 label="Ferramentas de formatação"
                 aria-pressed={toolbar}
-                onClick={() => setToolbar((value) => !value)}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  setToolbar((value) => !value)
+                  activeEditor?.commands.focus(undefined, { scrollIntoView: false })
+                }}
               >
                 <SlidersHorizontal size={17} />
               </IconButton>
@@ -717,15 +732,6 @@ export default function App() {
                 <Maximize2 size={16} />
               </IconButton>
             </div>
-          </div>
-          <div className="formatting-slot chrome">
-            {toolbar && activeEditor && (
-              <Formatting
-                editor={activeEditor}
-                insertImage={() => void chooseImage()}
-                insertLink={() => setLink(activeEditor.getAttributes('link').href || '')}
-              />
-            )}
           </div>
           <div className="document-caption chrome">
             <span className="eyebrow">{activeNote.path ? 'DOCUMENTO' : 'UMA NOVA PÁGINA'}</span>
@@ -758,6 +764,16 @@ export default function App() {
               }}
             />
           )}
+          <div className="formatting-dock chrome">
+            {formattingVisible && activeEditor && (
+              <Formatting
+                editor={activeEditor}
+                compact={!toolbar}
+                insertImage={() => void chooseImage()}
+                insertLink={() => setLink(activeEditor.getAttributes('link').href || '')}
+              />
+            )}
+          </div>
           <footer className="statusbar chrome">
             <span className="save-status">
               {activeNote.dirty ? (
@@ -792,7 +808,7 @@ export default function App() {
               <Focus size={13} />
             </div>
           </footer>
-          {!activeNote.dirty && !activeNote.path && (
+          {!activeNote.dirty && !activeNote.path && !formattingVisible && (
             <div className="writing-hint chrome">
               <Keyboard size={13} />
               <span>Comece a escrever. O resto desaparece.</span>
@@ -856,29 +872,6 @@ export default function App() {
         </Modal>
       )}
       {dialog.element}
-      {selectionRect &&
-        preferences.selectionTools &&
-        !immersive &&
-        !settings &&
-        !find &&
-        !dialog.visible &&
-        !librarySearch &&
-        activeEditor && (
-          <div
-            className="selection-toolbar chrome"
-            style={{
-              top: Math.max(50, selectionRect.top - 52),
-              left: Math.min(window.innerWidth - 420, Math.max(12, selectionRect.left)),
-            }}
-          >
-            <Formatting
-              editor={activeEditor}
-              compact
-              insertImage={() => void chooseImage()}
-              insertLink={() => setLink(activeEditor.getAttributes('link').href || '')}
-            />
-          </div>
-        )}
       <WindowResize onError={notify} />
       {notice && (
         <div className="toast chrome" role="status">

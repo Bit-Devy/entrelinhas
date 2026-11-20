@@ -194,7 +194,7 @@ export function Settings({
               {toggle(
                 'selectionTools',
                 'Ferramentas ao selecionar',
-                'Revela uma pequena barra para formatar a seleção.',
+                'Revela os botões de formatação na parte de baixo.',
               )}
             </>
           )}
