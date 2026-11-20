@@ -1,0 +1,71 @@
+import { useState } from 'react'
+import { Sun, Moon, Coffee, Paintbrush, Type, MousePointer2, FileText, Keyboard, SlidersHorizontal, Info } from 'lucide-react'
+import { Modal } from './ui'
+import { eventShortcut } from '../core/shortcuts'
+import type { Preferences, ShortcutAction } from '../core/types'
+
+const sections = [
+  { id: 'appearance', label: 'Aparência', icon: Paintbrush }, { id: 'editor', label: 'Editor', icon: Type },
+  { id: 'cursor', label: 'Cursor', icon: MousePointer2 }, { id: 'files', label: 'Arquivos', icon: FileText },
+  { id: 'shortcuts', label: 'Atalhos', icon: Keyboard }, { id: 'behavior', label: 'Comportamento', icon: SlidersHorizontal },
+  { id: 'about', label: 'Sobre', icon: Info },
+]
+
+export function Settings({ preferences: p, onChange, onClose }: { preferences: Preferences; onChange: (change: Partial<Preferences>) => void; onClose: () => void }) {
+  const [section, setSection] = useState('appearance'), [shortcutError, setShortcutError] = useState('')
+  const toggle = (key: 'autoImmersive' | 'askBeforeDiscard' | 'spellcheck' | 'selectionTools', title: string, description: string) => <label className="setting-row"><span><strong>{title}</strong><small>{description}</small></span><input className="switch" type="checkbox" checked={p[key]} onChange={event => onChange({ [key]: event.target.checked })} /></label>
+  return <Modal title="Configurações" onClose={onClose} wide>
+    <div className="settings-layout"><nav className="settings-nav" aria-label="Categorias de configurações">{sections.map(item => <button key={item.id} className={section === item.id ? 'selected' : ''} onClick={() => setSection(item.id)}><item.icon size={16} />{item.label}</button>)}</nav>
+      <div className="settings-content">
+        {section === 'appearance' && <>
+          <h3>Seu espaço, sua luz.</h3><p className="muted">Escolha a atmosfera que acompanha sua escrita.</p>
+          <div className="theme-options">{[{ id: 'light', label: 'Claro', icon: Sun }, { id: 'dark', label: 'Escuro', icon: Moon }, { id: 'sepia', label: 'Sépia Noturno', icon: Coffee }].map(theme => <button key={theme.id} className={`theme-choice ${p.theme === theme.id ? 'selected' : ''}`} aria-pressed={p.theme === theme.id} onClick={() => onChange({ theme: theme.id as Preferences['theme'] })}><span className={`theme-preview ${theme.id}`}><i /><i /><i /><b /></span><span><theme.icon size={14} />{theme.label}</span></button>)}</div>
+          <h4>Layout</h4>
+          <label className="setting-row"><span>Posição da navegação</span><select value={p.sidebarSide} onChange={event => onChange({ sidebarSide: event.target.value as Preferences['sidebarSide'] })}><option value="left">Esquerda</option><option value="right">Direita</option></select></label>
+          <label className="setting-row"><span>Posição das abas</span><select value={p.tabsPosition} onChange={event => onChange({ tabsPosition: event.target.value as Preferences['tabsPosition'] })}><option value="top">Superior</option><option value="left">Lateral esquerda</option><option value="right">Lateral direita</option></select></label>
+        </>}
+        {section === 'editor' && <>
+          <h3>Um ritmo confortável.</h3>
+          <label className="setting-row"><span>Fonte da escrita</span><select value={p.fontFamily} onChange={event => onChange({ fontFamily: event.target.value as Preferences['fontFamily'] })}><option value="serif">Serifada · Noto Serif</option><option value="sans">Sem serifa · Ubuntu</option><option value="mono">Monoespaçada</option></select></label>
+          <label className="setting-row"><span>Tamanho da fonte <small>{p.fontSize} px</small></span><input aria-label="Tamanho da fonte" type="range" min="12" max="40" value={p.fontSize} onChange={event => onChange({ fontSize: Number(event.target.value) })} /></label>
+          <label className="setting-row"><span>Espaçamento entre linhas <small>{p.lineHeight.toFixed(2)}</small></span><input aria-label="Espaçamento entre linhas" type="range" min="1.2" max="2.5" step="0.05" value={p.lineHeight} onChange={event => onChange({ lineHeight: Number(event.target.value) })} /></label>
+          <label className="setting-row"><span>Largura da escrita <small>{p.editorWidth} px</small></span><input aria-label="Largura da escrita" type="range" min="440" max="1100" step="20" value={p.editorWidth} onChange={event => onChange({ editorWidth: Number(event.target.value) })} /></label>
+          <label className="setting-row"><span>Zoom <small>{p.zoom}%</small></span><input aria-label="Zoom" type="range" min="50" max="200" step="10" value={p.zoom} onChange={event => onChange({ zoom: Number(event.target.value) })} /></label>
+          {toggle('spellcheck', 'Verificação ortográfica', 'Usa os idiomas disponíveis no sistema.')}
+          {toggle('selectionTools', 'Ferramentas ao selecionar', 'Revela uma pequena barra para formatar a seleção.')}
+        </>}
+        {section === 'cursor' && <>
+          <h3>O ponto de partida.</h3><p className="muted">O cursor acompanha a posição real da escrita.</p>
+          <div className="cursor-options">{[{ id: 'block', label: 'Em bloco', text: 'O padrão do Entre Linhas.' }, { id: 'thin', label: 'Fino', text: 'Uma linha discreta.' }, { id: 'hidden', label: 'Invisível', text: 'Apenas suas palavras.' }].map(cursor => <button key={cursor.id} className={`cursor-choice ${p.cursor === cursor.id ? 'selected' : ''}`} aria-pressed={p.cursor === cursor.id} onClick={() => onChange({ cursor: cursor.id as Preferences['cursor'] })}><span className={`cursor-sample ${cursor.id}`}>Entre <i />linhas</span><strong>{cursor.label}</strong><small>{cursor.text}</small></button>)}</div>
+        </>}
+        {section === 'files' && <>
+          <h3>Suas palavras continuam suas.</h3><p className="muted">Documentos são arquivos comuns. Você escolhe quando e onde salvar.</p>
+          <label className="setting-row"><span>Formato de novas notas</span><select value={p.defaultFormat} onChange={event => onChange({ defaultFormat: event.target.value as Preferences['defaultFormat'] })}><option value="md">Markdown (.md)</option><option value="txt">Texto simples (.txt)</option></select></label>
+          <div className="info-card">Imagens ficam em memória até o salvamento. Ao salvar em Markdown, os recursos vão para uma pasta ao lado do documento.</div>
+        </>}
+        {section === 'shortcuts' && <>
+          <h3>Ao alcance das mãos.</h3><p className="muted">Clique em um atalho e pressione a nova combinação com Ctrl.</p>
+          {(Object.entries({ new: 'Nova nota', open: 'Abrir documento', save: 'Salvar', saveAs: 'Salvar como', close: 'Fechar aba', find: 'Pesquisar', replace: 'Substituir', immersive: 'Modo imersivo' }) as [ShortcutAction, string][]).map(([action, label]) => <label key={action} className="setting-row"><span>{label}</span><input className="shortcut-input" aria-label={`Atalho: ${label}`} readOnly value={p.shortcuts[action]} onKeyDown={event => {
+            if (event.key === 'Tab' || event.key === 'Escape') return
+            event.preventDefault(); event.stopPropagation()
+            const shortcut = eventShortcut(event.nativeEvent)
+            if (!shortcut) return
+            const reserved = ['Ctrl+B', 'Ctrl+I', 'Ctrl+U', 'Ctrl+Z', 'Ctrl+Shift+Z', 'Ctrl+C', 'Ctrl+V', 'Ctrl+X', 'Ctrl+A', 'Ctrl+TAB', 'Ctrl+Shift+TAB', 'Ctrl+Q', 'Ctrl+L', 'Ctrl+R', 'Ctrl+P']
+            if (!/^Ctrl\+(Shift\+)?(Alt\+)?[A-Z0-9]$/.test(shortcut) || reserved.includes(shortcut) || Object.entries(p.shortcuts).some(([key, value]) => key !== action && value === shortcut)) { setShortcutError('Escolha uma combinação com Ctrl que ainda esteja disponível.'); return }
+            setShortcutError(''); onChange({ shortcuts: { ...p.shortcuts, [action]: shortcut } })
+          }} /></label>)}
+          {shortcutError && <p role="alert" className="error-text">{shortcutError}</p>}
+          <p className="muted small">F11 · tela cheia &nbsp; Esc · revelar controles<br />Ctrl+Tab · próxima aba &nbsp; Ctrl+Shift+Tab · aba anterior</p>
+        </>}
+        {section === 'behavior' && <>
+          <h3>A interface sabe a hora.</h3>
+          {toggle('autoImmersive', 'Imersão automática', 'Oculta os controles assim que você começa a escrever.')}
+          {toggle('askBeforeDiscard', 'Perguntar antes de descartar', 'Ao fechar uma aba ou o aplicativo com alterações não salvas.')}
+          <div className="info-card">Esc revela os controles. Para acessá-los com o mouse, mantenha o ponteiro junto à borda superior ou à borda da navegação por um instante.</div>
+          <p className="muted small">O aplicativo sempre começa com uma nota vazia. Rascunhos descartados não são gravados nem recuperados.</p>
+        </>}
+        {section === 'about' && <div className="about"><div className="brand-symbol large"><i /><i /><i /><b /></div><h3>Entre Linhas</h3><p>Um espaço tranquilo para escrever.</p><span className="version-pill">Versão 0.1.0</span><p className="muted">Feito com Tauri, React e cuidado.<br />Local, offline e com salvamento manual.</p><p className="small muted">Por Bit-Devy · Licença MIT</p></div>}
+      </div>
+    </div>
+  </Modal>
+}
