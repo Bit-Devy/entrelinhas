@@ -740,13 +740,7 @@ export default function App() {
               </IconButton>
             </div>
           </div>
-          <div className="document-caption chrome">
-            <span className="eyebrow">{activeNote.path ? 'DOCUMENTO' : 'UMA NOVA PÁGINA'}</span>
-            <div className="caption-meta">
-              <span className="small-line" />
-              {activeNote.path ? 'Salve quando quiser.' : 'Sem pressa. Sem distrações.'}
-            </div>
-          </div>
+          <div className="editor-top-space" aria-hidden="true" />
           {notes.map((note) => (
             <EditorPane
               key={note.id}

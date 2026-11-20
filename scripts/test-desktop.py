@@ -216,6 +216,8 @@ def main():
             assert app.js('return document.title') == 'Entrelinhas'
             assert app.js('return document.querySelector(".brand").children.length') == 1
             assert app.js('return document.querySelectorAll("[role=tab]").length') == 0
+            assert not app.js('return !!document.querySelector(".document-caption")')
+            assert app.js('const editor=document.querySelector(".tiptap").getBoundingClientRect(), bar=document.querySelector(".document-toolbar").getBoundingClientRect();return Math.abs(editor.top-bar.bottom-56)<1')
             app.screenshot(output / 'blank.png')
             passed('inicialização em nota vazia')
             original_rect = app.call('/window/rect')

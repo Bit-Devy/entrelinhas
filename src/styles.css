@@ -696,32 +696,8 @@ p {
   cursor: pointer;
 }
 
-.document-caption {
-  width: min(var(--editor-width), calc(100% - 100px));
-  margin: 0 auto;
-  padding-top: 37px;
-  height: 104px;
-  flex: 0 0 104px;
-}
-.eyebrow {
-  font-size: 9px;
-  letter-spacing: 2.1px;
-  font-weight: 500;
-  color: var(--faint);
-}
-.caption-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  color: var(--faint);
-  margin-top: 9px;
-}
-.small-line {
-  width: 18px;
-  height: 1px;
-  background: var(--accent);
-  opacity: 0.6;
+.editor-top-space {
+  flex: 0 0 56px;
 }
 .editor-scroll {
   flex: 1;
@@ -1698,10 +1674,6 @@ body,
 .writing-paper {
   width: var(--writing-width);
   max-width: none;
-  margin-inline: var(--writing-offset) 0;
-}
-.document-caption {
-  width: var(--writing-width);
   margin-inline: var(--writing-offset) 0;
 }
 .nav-button > span {
