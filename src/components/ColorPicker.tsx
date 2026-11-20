@@ -67,7 +67,7 @@ export function ColorPicker({ label, value, onChange, onClear, onDone, textTool 
         aria-label={label}
         aria-haspopup="dialog"
         aria-expanded={open}
-        title={label}
+        data-tooltip={label}
         style={
           textTool ? { borderBottomColor: normalizeColor(value) ?? 'var(--accent)' } : undefined
         }

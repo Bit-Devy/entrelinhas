@@ -38,6 +38,7 @@ import { LibrarySearch } from './components/LibrarySearch'
 import { FindBar } from './components/FindBar'
 import { WelcomeTheme } from './components/WelcomeTheme'
 import { Settings } from './components/Settings'
+import { TooltipLayer } from './components/TooltipLayer'
 import { IconButton, Modal } from './components/ui'
 
 export default function App() {
@@ -562,7 +563,7 @@ export default function App() {
               >
                 <FileText size={14} />
                 <span>{note.title}</span>
-                {note.dirty && <i className="dirty-dot" title="Alterações não salvas" />}
+                {note.dirty && <i className="dirty-dot" data-tooltip="Alterações não salvas" />}
                 <IconButton
                   label={`Fechar ${note.title}`}
                   onClick={(event) => {
@@ -595,6 +596,7 @@ export default function App() {
               <div className="document-menu-wrapper">
                 <button
                   className="document-menu"
+                  aria-label="Opções do documento"
                   aria-expanded={menu}
                   onClick={() => setMenu((value) => !value)}
                 >
@@ -708,11 +710,16 @@ export default function App() {
                   activeEditor?.commands.focus()
                 }}
               />
-              <IconButton label="Salvar documento" onClick={() => void fileOps.saveNote(activeId)}>
+              <IconButton
+                label="Salvar documento"
+                data-shortcut={preferences.shortcuts.save}
+                onClick={() => void fileOps.saveNote(activeId)}
+              >
                 <Save size={16} />
               </IconButton>
               <IconButton
                 label="Ferramentas de formatação"
+                data-tooltip={toolbar ? 'Ocultar formatação' : 'Mostrar formatação'}
                 aria-pressed={toolbar}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
@@ -800,7 +807,9 @@ export default function App() {
                     zoom: current.zoom >= 150 ? 100 : current.zoom + 10,
                   }))
                 }
-                title="Zoom · Ctrl + / Ctrl -"
+                aria-label="Alterar zoom"
+                data-tooltip="Zoom"
+                data-shortcut="Ctrl+ / Ctrl−"
               >
                 {preferences.zoom}%
               </button>
@@ -873,6 +882,7 @@ export default function App() {
       )}
       {dialog.element}
       <WindowResize onError={notify} />
+      <TooltipLayer hidden={immersive} />
       {notice && (
         <div className="toast chrome" role="status">
           {notice}

@@ -107,7 +107,12 @@ class Desktop:
         wait(lambda: self.js('return getComputedStyle(document.querySelector(".titlebar")).opacity==="1"'), 'revelar interface')
 
     def screenshot(self, path):
+        self.call('/execute/async', {'script': 'const done=arguments[arguments.length-1];requestAnimationFrame(()=>requestAnimationFrame(()=>done(true)));', 'args': []})
         path.write_bytes(base64.b64decode(self.call('/screenshot')))
+
+    def hover(self, css):
+        element = self.element(css)
+        self.call('/actions', {'actions': [{'type': 'pointer', 'id': 'mouse', 'parameters': {'pointerType': 'mouse'}, 'actions': [{'type': 'pointerMove', 'duration': 50, 'origin': 'viewport', 'x': 10, 'y': 10}, {'type': 'pointerMove', 'duration': 100, 'origin': {'element-6066-11e4-a52e-4f735466cecf': element}, 'x': 0, 'y': 0}]}]})
 
     def stop(self):
         if self.session:
@@ -316,19 +321,39 @@ def main():
             assert app.editor('return editor.getAttributes("textStyle").fontSize') == '24px'
             assert app.editor('return {from:editor.state.selection.from,to:editor.state.selection.to}') == selection
             app.choose('Tamanho do texto selecionado', '')
+            assert not app.editor('return editor.getAttributes("textStyle").fontSize')
             app.click('[aria-label="Negrito (Ctrl+B)"]')
             assert app.editor('return editor.isActive("bold")')
             app.click('[aria-label="Negrito (Ctrl+B)"]')
             app.choose('Estilo do parágrafo', '2')
             assert app.editor('return editor.isActive("heading",{level:2})')
             app.choose('Estilo do parágrafo', 'p')
+            assert app.editor('return editor.isActive("paragraph")')
+            wait(lambda: app.js('return document.querySelector(arguments[0]).textContent.trim()', '[aria-label="Estilo do parágrafo"]') == 'Texto', 'atualizar estilo selecionado')
+            time.sleep(.1)
             app.screenshot(output / 'formatting-bottom.png')
+            app.hover('[aria-label="Negrito (Ctrl+B)"]')
+            wait(lambda: app.js('return document.querySelector("[role=tooltip]")?.innerText.includes("Negrito")'), 'dica acima da formatação')
+            assert app.js('return document.querySelector("[role=tooltip]").getBoundingClientRect().bottom <= document.querySelector(".formatting").getBoundingClientRect().top')
+            app.screenshot(output / 'tooltip-formatting.png')
             passed('formatação inferior sem moldura e seletores preservam a seleção')
             app.click('[aria-label="Cor do texto"]')
             app.click('[aria-label="Usar cor #6f94b5"]')
             app.click('[role="dialog"][aria-label="Cor do texto"] .primary')
             wait(lambda: app.editor('return JSON.stringify(editor.getJSON()).includes("#6f94b5")'), 'aplicar cor à seleção do texto')
             passed('seletores de cor próprios preservam o formulário e a seleção do texto')
+            app.editor('editor.commands.focus("end");return true')
+            app.click('[aria-label="Inserir tabela"]')
+            app.choose('Editar tabela', 'row')
+            assert app.js('return document.querySelectorAll(".editor-scroll:not(.inactive) table tr").length') == 4
+            app.choose('Editar tabela', 'column')
+            assert app.js('return document.querySelectorAll(".editor-scroll:not(.inactive) table tr:first-child > *").length') == 4
+            app.choose('Editar tabela', 'delete-row')
+            app.choose('Editar tabela', 'delete-column')
+            assert app.js('return document.querySelectorAll(".editor-scroll:not(.inactive) table tr").length') == 3
+            app.choose('Editar tabela', 'delete')
+            assert not app.js('return !!document.querySelector(".editor-scroll:not(.inactive) table")')
+            passed('menu de tabela executa adição e remoção de linhas e colunas')
             # Insere a imagem pela mesma transação utilizada pelo comando do editor.
             image = root / 'src-tauri/icons/32x32.png'
             data_url = app.ipc('import_image', path=str(image))
@@ -373,7 +398,18 @@ def main():
                 app.screenshot(output / f'color-{theme}.png')
                 app.click('[aria-label="Fechar painel"]')
                 app.click('[aria-label="Ferramentas de formatação"]')
+                app.hover('[aria-label="Salvar documento"]')
+                wait(lambda: app.js('return !!document.querySelector("[role=tooltip]")'), 'dica temática de salvar')
+                assert app.js('return document.querySelector("[role=tooltip]").innerText.includes("Salvar documento")')
+                assert app.js('return getComputedStyle(document.querySelector("[role=tooltip]")).backgroundColor') == expected_surface
+                assert not app.js('return !!document.querySelector("button[title]")')
+                wait(lambda: app.js('return getComputedStyle(document.querySelector("[role=tooltip]")).opacity') == '1', 'terminar animação da dica')
+                app.screenshot(output / f'tooltip-{theme}.png')
                 app.click('[aria-label="Configurações"]')
+            app.js('return [...document.querySelectorAll(".settings-nav button")].find(button=>button.innerText==="Editor").click()')
+            app.choose('Fonte da escrita', 'mono')
+            assert app.js('return getComputedStyle(document.querySelector(".tiptap")).fontFamily.includes("Ubuntu Mono")')
+            app.choose('Fonte da escrita', 'serif')
             app.js('return [...document.querySelectorAll(".settings-nav button")].find(button=>button.innerText==="Cursor").click()')
             app.js('return [...document.querySelectorAll(".cursor-choice")].find(button=>button.innerText.includes("Invisível")).click()')
             assert app.js('return document.querySelector(".editor-scroll:not(.inactive)").dataset.cursor') == 'hidden'
@@ -387,6 +423,7 @@ def main():
             assert app.js('return document.documentElement.dataset.theme') == 'sepia'
             assert app.js('return document.querySelector(".editor-scroll").dataset.cursor') == 'thin'
             passed('três temas, três cursores, capturas reais e preferências entre execuções')
+            passed('dicas de botões acompanham os três temas e exibem os atalhos')
             app.click('[aria-label="Configurações"]')
             app.choose("Posição da navegação", "right")
             app.choose("Posição das abas", "left")

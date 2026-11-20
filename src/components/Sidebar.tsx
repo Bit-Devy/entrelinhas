@@ -142,7 +142,7 @@ export function Sidebar(p: Props) {
     >
       <button
         className="document-entry"
-        title={document.path}
+        data-tooltip={document.path}
         onClick={() => void p.openPath(document.path)}
       >
         <FileText size={13} />

@@ -5,10 +5,17 @@ import { createPortal } from 'react-dom'
 export function IconButton({
   label,
   children,
+  title,
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { label: string }) {
   return (
-    <button type="button" className="icon-button" aria-label={label} title={label} {...props}>
+    <button
+      type="button"
+      className="icon-button"
+      aria-label={label}
+      data-tooltip={title ?? label}
+      {...props}
+    >
       {children}
     </button>
   )
