@@ -229,53 +229,6 @@ p {
   font-weight: 550;
   letter-spacing: -0.2px;
 }
-.brand-symbol {
-  width: 26px;
-  height: 26px;
-  background: linear-gradient(150deg, #87977b, #4c6150);
-  border-radius: 7px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 7px 6px;
-  position: relative;
-  flex-shrink: 0;
-}
-.brand-symbol i {
-  display: block;
-  background: #f5f2e8;
-  height: 1.5px;
-  width: 100%;
-  border-radius: 2px;
-}
-.brand-symbol i:nth-child(2) {
-  width: 58%;
-}
-.brand-symbol b {
-  position: absolute;
-  width: 2px;
-  height: 6px;
-  background: #f5f2e8;
-  right: 8px;
-  top: 10px;
-  border-radius: 1px;
-}
-.brand-symbol.large {
-  width: 62px;
-  height: 62px;
-  padding: 16px 14px;
-  border-radius: 18px;
-  margin: 10px auto 22px;
-}
-.brand-symbol.large i {
-  height: 3px;
-}
-.brand-symbol.large b {
-  width: 4px;
-  height: 13px;
-  top: 25px;
-  right: 19px;
-}
 .window-title {
   position: absolute;
   left: 50%;
@@ -1894,4 +1847,11 @@ body,
   margin-right: auto;
   color: var(--muted);
   padding-left: 0;
+}
+
+.app-icon {
+  display: block;
+  width: 64px;
+  height: 64px;
+  margin: 10px auto 22px;
 }

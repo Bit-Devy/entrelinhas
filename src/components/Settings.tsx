@@ -11,6 +11,7 @@ import {
   SlidersHorizontal,
   Info,
 } from 'lucide-react'
+import { AppIcon } from './AppIcon'
 import { Modal } from './ui'
 import { eventShortcut } from '../core/shortcuts'
 import type { Preferences, ShortcutAction } from '../core/types'
@@ -362,12 +363,7 @@ export function Settings({
           )}
           {section === 'about' && (
             <div className="about">
-              <div className="brand-symbol large">
-                <i />
-                <i />
-                <i />
-                <b />
-              </div>
+              <AppIcon />
               <h3>Entrelinhas</h3>
               <p>Um espaço tranquilo para escrever.</p>
               <span className="version-pill">Versão 0.1.0</span>
