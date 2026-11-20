@@ -23,6 +23,7 @@ import type { Preferences, Project, RegisteredDocument } from '../core/types'
 import { backend, errorMessage } from '../native/api'
 import { moveItem } from '../core/notes'
 import type { AskDialog } from './useDialog'
+import { ColorPicker } from './ColorPicker'
 import { ProjectAssignment } from './ProjectAssignment'
 import { IconButton, Modal } from './ui'
 
@@ -437,11 +438,10 @@ export function Sidebar(p: Props) {
             <div className="project-customization">
               <label>
                 Cor
-                <input
-                  aria-label="Cor do projeto"
-                  type="color"
+                <ColorPicker
+                  label="Cor do projeto"
                   value={projectColor}
-                  onChange={(event) => setProjectColor(event.target.value)}
+                  onChange={setProjectColor}
                 />
               </label>
               <label>

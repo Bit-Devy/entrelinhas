@@ -21,6 +21,7 @@ import {
   Undo2,
   Redo2,
 } from 'lucide-react'
+import { ColorPicker } from './ColorPicker'
 import { IconButton } from './ui'
 
 export function Formatting({
@@ -80,7 +81,11 @@ export function Formatting({
       role="toolbar"
       aria-label="Formatação"
       onMouseDown={(event) => {
-        if ((event.target as HTMLElement).closest('button')) event.preventDefault()
+        if (
+          event.currentTarget.contains(event.target as Node) &&
+          (event.target as HTMLElement).closest('button')
+        )
+          event.preventDefault()
       }}
     >
       <select
@@ -118,15 +123,20 @@ export function Formatting({
       ))}
       {!compact && (
         <>
-          <label className="color-tool" title="Cor do texto">
-            <span>A</span>
-            <input
-              type="color"
-              aria-label="Cor do texto"
-              value={editor.getAttributes('textStyle').color || '#61755b'}
-              onChange={(event) => editor.chain().focus().setColor(event.target.value).run()}
-            />
-          </label>
+          <ColorPicker
+            label="Cor do texto"
+            value={editor.getAttributes('textStyle').color || '#61755b'}
+            textTool
+            onChange={(color) => {
+              editor.chain().focus().setColor(color).run()
+            }}
+            onClear={() => {
+              editor.chain().focus().unsetColor().run()
+            }}
+            onDone={() => {
+              editor.commands.focus()
+            }}
+          />
           <select
             aria-label="Tamanho do texto selecionado"
             value={editor.getAttributes('textStyle').fontSize || ''}

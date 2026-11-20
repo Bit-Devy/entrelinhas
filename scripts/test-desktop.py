@@ -201,9 +201,18 @@ def main():
             passed('fechar e reabrir descarta rascunhos sem recuperação')
             app.click('[aria-label="Criar projeto"]')
             app.keys('.modal input[maxlength="120"]', 'Caderno de ideias')
+            app.click('[aria-label="Cor do projeto"]')
+            assert app.js('return document.querySelectorAll("[role=dialog]").length') == 2
+            color_input = app.element('[aria-label="Cor em hexadecimal"]')
+            app.call('/element/' + color_input + '/clear', {})
+            app.keys('[aria-label="Cor em hexadecimal"]', '#b37a59')
+            app.click('[role="dialog"][aria-label="Cor do projeto"] .primary')
+            wait(lambda: app.js('return document.querySelectorAll("[role=dialog]").length') == 1, 'voltar ao formulário do projeto')
+            assert not app.ipc('load_library')['projects'], 'A cor não deve submeter o formulário do projeto.'
             app.click('.modal button[type="submit"]')
             wait(lambda: len(app.ipc('load_library')['projects']) == 1, 'criar projeto')
             project_id = app.ipc('load_library')['projects'][0]['id']
+            assert app.ipc('load_library')['projects'][0]['color'] == '#b37a59'
             app.click('[aria-label="Projeto do documento atual"]')
             app.click(f'[role="option"][data-project-id="{project_id}"]')
             wait(lambda: app.js('return document.querySelector(".project-assignment").innerText.includes("Caderno de ideias")'), 'selecionar projeto no painel do aplicativo')
@@ -253,10 +262,18 @@ def main():
             assert 'palavras' in app.editor('return editor.getText()')
             app.reveal()
             passed('localizar e substituir')
+            app.editor('let range;editor.state.doc.descendants((node,pos)=>{if(node.isText && node.text.startsWith("Algumas")) range={from:pos,to:pos+7}});editor.chain().focus().setTextSelection(range).run();return true')
+            app.click('[aria-label="Ferramentas de formatação"]')
+            app.click('[aria-label="Cor do texto"]')
+            app.click('[aria-label="Usar cor #6f94b5"]')
+            app.click('[role="dialog"][aria-label="Cor do texto"] .primary')
+            wait(lambda: app.editor('return JSON.stringify(editor.getJSON()).includes("#6f94b5")'), 'aplicar cor à seleção do texto')
+            passed('seletores de cor próprios preservam o formulário e a seleção do texto')
             # Insere a imagem pela mesma transação utilizada pelo comando do editor.
             image = root / 'src-tauri/icons/32x32.png'
             data_url = app.ipc('import_image', path=str(image))
-            app.click('[aria-label="Ferramentas de formatação"]')
+            if app.js("return document.querySelector('[aria-label=\"Ferramentas de formatação\"]').getAttribute('aria-pressed')") == 'false':
+                app.click('[aria-label="Ferramentas de formatação"]')
             app.click('[aria-label="Inserir imagem"]')
             native_chooser(data_home)
             app.editor('editor.commands.focus("end");return true')
@@ -280,6 +297,14 @@ def main():
                 app.js('document.querySelector(".editor-scroll:not(.inactive)").scrollTop=0;document.querySelector(".toast button")?.click()')
                 time.sleep(.25)
                 app.screenshot(output / f'{theme}.png')
+                if app.js("return document.querySelector('[aria-label=\"Ferramentas de formatação\"]').getAttribute('aria-pressed')") == 'false':
+                    app.click('[aria-label="Ferramentas de formatação"]')
+                app.click('[aria-label="Cor do texto"]')
+                expected_surface = {'light':'rgb(255, 255, 255)', 'dark':'rgb(36, 38, 42)', 'sepia':'rgb(51, 46, 39)'}[theme]
+                assert app.js('return getComputedStyle(document.querySelector(".color-picker-body").closest(".modal")).backgroundColor') == expected_surface
+                app.screenshot(output / f'color-{theme}.png')
+                app.click('[aria-label="Fechar painel"]')
+                app.click('[aria-label="Ferramentas de formatação"]')
                 app.click('[aria-label="Configurações"]')
             app.js('return [...document.querySelectorAll(".settings-nav button")].find(button=>button.innerText==="Cursor").click()')
             app.js('return [...document.querySelectorAll(".cursor-choice")].find(button=>button.innerText.includes("Invisível")).click()')

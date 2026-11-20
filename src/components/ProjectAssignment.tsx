@@ -26,7 +26,10 @@ export function ProjectAssignment({
   const selected = projects.find((project) => project.id === value)
   const close = () => {
     setOpen(false)
-    if (onDone) requestAnimationFrame(onDone)
+    if (onDone)
+      requestAnimationFrame(() => {
+        if (!document.querySelector('[role=dialog]')) onDone()
+      })
   }
   const choose = async (projectId: string | null) => {
     if (busy) return
