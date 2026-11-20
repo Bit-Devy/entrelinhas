@@ -440,13 +440,7 @@ export default function App() {
     >
       <header className="titlebar chrome" data-tauri-drag-region>
         <div className="brand" data-tauri-drag-region>
-          <div className="brand-symbol">
-            <i />
-            <i />
-            <i />
-            <b />
-          </div>
-          <span data-tauri-drag-region>Entre Linhas</span>
+          <span data-tauri-drag-region>Entrelinhas</span>
         </div>
         <div className="window-title" data-tauri-drag-region>
           {activeNote.title}

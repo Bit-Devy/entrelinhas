@@ -93,7 +93,7 @@ fn check_conflict(path: &Path, expected: Option<&str>, overwrite: bool) -> AppRe
         if expected != Some(fingerprint(&fs::read(path)?).as_str()) {
             return Err(AppError::new(
                 "conflict",
-                "O arquivo já existe ou foi alterado fora do Entre Linhas.",
+                "O arquivo já existe ou foi alterado fora do Entrelinhas.",
             ));
         }
     } else if expected.is_some() {

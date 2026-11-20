@@ -154,5 +154,5 @@ pub fn run() {
             search_documents
         ])
         .run(tauri::generate_context!())
-        .expect("Não foi possível iniciar o Entre Linhas");
+        .expect("Não foi possível iniciar o Entrelinhas");
 }

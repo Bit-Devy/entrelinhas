@@ -216,7 +216,7 @@ export function Settings({
               <p className="muted">O cursor acompanha a posição real da escrita.</p>
               <div className="cursor-options">
                 {[
-                  { id: 'block', label: 'Em bloco', text: 'O padrão do Entre Linhas.' },
+                  { id: 'block', label: 'Em bloco', text: 'O padrão do Entrelinhas.' },
                   { id: 'thin', label: 'Fino', text: 'Uma linha discreta.' },
                   { id: 'hidden', label: 'Invisível', text: 'Apenas suas palavras.' },
                 ].map((cursor) => (
@@ -368,7 +368,7 @@ export function Settings({
                 <i />
                 <b />
               </div>
-              <h3>Entre Linhas</h3>
+              <h3>Entrelinhas</h3>
               <p>Um espaço tranquilo para escrever.</p>
               <span className="version-pill">Versão 0.1.0</span>
               <p className="muted">

@@ -1,10 +1,10 @@
-# Entre Linhas
+# Entrelinhas
 
 **Um espaço tranquilo para escrever.**
 
-Entre Linhas é um editor **desktop de verdade**, feito com Tauri 2, React e TypeScript para Ubuntu. Ao começar a digitar, a interface desaparece. Restam o texto, o fundo e o cursor. Esc traz os controles de volta, sem deslocar o texto.
+Entrelinhas é um editor **desktop de verdade**, feito com Tauri 2, React e TypeScript para Ubuntu. Ao começar a digitar, a interface desaparece. Restam o texto, o fundo e o cursor. Esc traz os controles de volta, sem deslocar o texto.
 
-![Entre Linhas — Sépia Noturno](docs/screenshots/sepia.png)
+![Entrelinhas — Sépia Noturno](docs/screenshots/sepia.png)
 
 ## Suas palavras, no seu tempo
 
@@ -78,7 +78,7 @@ Para instalar um pacote compilado localmente:
 sudo apt install ./src-tauri/target/release/bundle/deb/*.deb
 ```
 
-O aplicativo aparece no menu como **Entre Linhas**, com ícone próprio. O pacote depende do WebKitGTK 4.1 e GTK 3 do sistema. Uma compilação feita no Ubuntu 26.10 não garante compatibilidade binária com versões anteriores do Ubuntu; para elas, compile no sistema de destino.
+O aplicativo aparece no menu como **Entrelinhas**, com ícone próprio. O pacote depende do WebKitGTK 4.1 e GTK 3 do sistema. Uma compilação feita no Ubuntu 26.10 não garante compatibilidade binária com versões anteriores do Ubuntu; para elas, compile no sistema de destino.
 
 ### Instalação local, sem sudo
 

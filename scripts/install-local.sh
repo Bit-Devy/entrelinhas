@@ -26,7 +26,7 @@ os.replace(executable.with_name('entrelinhas.new'), executable)
 quoted = str(executable).replace('\\', '\\\\').replace('"', '\\"').replace('`', '\\`').replace('$', '\\$')
 content = f'''[Desktop Entry]
 Type=Application
-Name=Entre Linhas
+Name=Entrelinhas
 Comment=Um espaço tranquilo para escrever
 Exec="{quoted}"
 Icon=entrelinhas
@@ -47,4 +47,4 @@ install -Dm 644 "$entrelinhas_root/src-tauri/icons/128x128@2x.png" "$entrelinhas
 install -Dm 644 "$entrelinhas_root/assets/icon.svg" "$entrelinhas_data/icons/hicolor/scalable/apps/entrelinhas.svg"
 if command -v update-desktop-database >/dev/null; then update-desktop-database "$entrelinhas_data/applications"; fi
 if command -v gtk-update-icon-cache >/dev/null; then gtk-update-icon-cache -f -t "$entrelinhas_data/icons/hicolor" >/dev/null; fi
-printf 'Entre Linhas instalado no menu de aplicativos.\nExecutável: %s\n' "$entrelinhas_install/bin/entrelinhas"
+printf 'Entrelinhas instalado no menu de aplicativos.\nExecutável: %s\n' "$entrelinhas_install/bin/entrelinhas"

@@ -176,6 +176,8 @@ def main():
             wait(lambda: urllib.request.urlopen(f'http://127.0.0.1:{port}/status', timeout=1).status == 200, 'WebDriver')
             app.start()
             assert app.editor('return editor.getText()') == ''
+            assert app.js('return document.title') == 'Entrelinhas'
+            assert app.js('return document.querySelector(".brand").children.length') == 1
             assert app.js('return document.querySelectorAll("[role=tab]").length') == 1
             passed('inicialização em nota vazia')
             before = app.js('return document.querySelector(".tiptap").getBoundingClientRect().toJSON()')

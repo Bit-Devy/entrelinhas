@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Entre Linhas",
+  "productName": "Entrelinhas",
   "version": "0.1.0",
   "identifier": "io.github.bitdevy.entrelinhas",
   "build": {
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Entre Linhas",
+        "title": "Entrelinhas",
         "label": "main",
         "width": 1180,
         "height": 780,
@@ -43,7 +43,9 @@
     ],
     "linux": {
       "deb": {
-        "desktopTemplate": "resources/entrelinhas.desktop"
+        "desktopTemplate": "resources/entrelinhas.desktop",
+        "conflicts": ["entre-linhas"],
+        "replaces": ["entre-linhas"]
       }
     }
   }
