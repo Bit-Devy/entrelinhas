@@ -34,4 +34,11 @@ describe('coluna de escrita', () => {
     expect(layout.writingWidth).toBe(600)
     expect(layout.writingOffset).toBe(660)
   })
+  it('não reserva espaço lateral para guias ocultas', () => {
+    const preferences = { ...defaultPreferences, tabsPosition: 'right' as const }
+    const hidden = getWritingLayout(1500, preferences, false)
+    expect(hidden.right).toBe(0)
+    expect(hidden.writingOffset + hidden.left + hidden.writingWidth / 2).toBe(750)
+    expect(getWritingLayout(1500, preferences, true).right).toBe(155)
+  })
 })

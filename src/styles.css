@@ -392,6 +392,7 @@ p {
   flex-direction: column;
 }
 .tabs {
+  animation: reveal-tabs 0.16s ease-out;
   height: 40px;
   flex: 0 0 40px;
   display: flex;
@@ -401,6 +402,22 @@ p {
   padding: 4px 10px 0;
   overflow-x: auto;
   background: var(--bg);
+}
+@keyframes reveal-tabs {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.document-navigation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 .tab {
   display: flex;

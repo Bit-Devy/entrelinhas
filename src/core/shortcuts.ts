@@ -16,6 +16,6 @@ export function shortcutAction(
   return (
     (Object.entries(preferences.shortcuts).find(
       ([, value]) => value === shortcut,
-    )?.[0] as ShortcutAction) ?? null
+    )?.[0] as ShortcutAction) ?? (shortcut === 'Ctrl+T' ? 'new' : null)
   )
 }

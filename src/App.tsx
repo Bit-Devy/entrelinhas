@@ -429,7 +429,13 @@ export default function App() {
     }
   }, [immersive, preferences.sidebarSide])
 
-  const layout = getWritingLayout(windowWidth, preferences)
+  const tabsVisible = notes.length > 1
+  const newTabShortcut = Object.entries(preferences.shortcuts).some(
+    ([action, shortcut]) => action !== 'new' && shortcut === 'Ctrl+T',
+  )
+    ? preferences.shortcuts.new
+    : 'Ctrl+T'
+  const layout = getWritingLayout(windowWidth, preferences, tabsVisible)
   const style = {
     '--sidebar-width': `${layout.sidebarWidth}px`,
     '--writing-width': `${layout.writingWidth}px`,
@@ -510,162 +516,175 @@ export default function App() {
         }
       />
       <section className="workspace">
-        <div className="tabs chrome" role="tablist" aria-label="Documentos abertos">
-          {!preferences.sidebarVisible && (
-            <IconButton
-              label="Mostrar navegação"
-              onClick={() => setPreferences((current) => ({ ...current, sidebarVisible: true }))}
-            >
-              <PanelLeftOpen size={17} />
-            </IconButton>
-          )}
-          {notes.map((note) => (
-            <div
-              key={note.id}
-              className={`tab ${note.id === activeId ? 'active' : ''}`}
-              role="tab"
-              tabIndex={0}
-              aria-selected={note.id === activeId}
-              draggable
-              onDragStart={() => {
-                dragged.current = note.id
-              }}
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault()
-                setNotes((current) =>
-                  moveItem(
-                    current,
-                    current.findIndex((item) => item.id === dragged.current),
-                    current.findIndex((item) => item.id === note.id),
-                  ),
-                )
-                dragged.current = null
-              }}
-              onClick={() => {
-                setActiveId(note.id)
-                setSelectionRect(null)
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') setActiveId(note.id)
-              }}
-            >
-              <FileText size={14} />
-              <span>{note.title}</span>
-              {note.dirty && <i className="dirty-dot" title="Alterações não salvas" />}
-              <IconButton
-                label={`Fechar ${note.title}`}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  closeNote(note.id)
+        {tabsVisible && (
+          <div className="tabs chrome" role="tablist" aria-label="Documentos abertos">
+            {notes.map((note) => (
+              <div
+                key={note.id}
+                className={`tab ${note.id === activeId ? 'active' : ''}`}
+                role="tab"
+                tabIndex={0}
+                aria-selected={note.id === activeId}
+                draggable
+                onDragStart={() => {
+                  dragged.current = note.id
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  setNotes((current) =>
+                    moveItem(
+                      current,
+                      current.findIndex((item) => item.id === dragged.current),
+                      current.findIndex((item) => item.id === note.id),
+                    ),
+                  )
+                  dragged.current = null
+                }}
+                onClick={() => {
+                  setActiveId(note.id)
+                  setSelectionRect(null)
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') setActiveId(note.id)
                 }}
               >
-                <X size={13} />
-              </IconButton>
-            </div>
-          ))}
-          <IconButton label="Nova aba" onClick={() => newNote()}>
-            <Plus size={16} />
-          </IconButton>
-        </div>
-        <div className="document-area">
-          <div className="document-toolbar chrome">
-            <div className="document-menu-wrapper">
-              <button
-                className="document-menu"
-                aria-expanded={menu}
-                onClick={() => setMenu((value) => !value)}
-              >
-                <FileText size={15} />
-                <span>{activeNote.path ? activeNote.title : 'Rascunho'}</span>
-                <ChevronDown size={13} />
-              </button>
-              {menu && (
-                <div
-                  ref={menuRef}
-                  className="dropdown"
-                  role="menu"
-                  onKeyDown={(event) => {
-                    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
-                    event.preventDefault()
-                    const items = [
-                      ...event.currentTarget.querySelectorAll<HTMLButtonElement>('[role=menuitem]'),
-                    ]
-                    const index = items.indexOf(document.activeElement as HTMLButtonElement)
-                    const next =
-                      event.key === 'Home'
-                        ? 0
-                        : event.key === 'End'
-                          ? items.length - 1
-                          : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) %
-                            items.length
-                    items[next]?.focus()
+                <FileText size={14} />
+                <span>{note.title}</span>
+                {note.dirty && <i className="dirty-dot" title="Alterações não salvas" />}
+                <IconButton
+                  label={`Fechar ${note.title}`}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    closeNote(note.id)
                   }}
                 >
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      newNote()
-                      setMenu(false)
-                    }}
-                  >
-                    <Plus size={15} />
-                    Nova nota<kbd>Ctrl N</kbd>
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      void fileOps.openDocument()
-                      setMenu(false)
-                    }}
-                  >
-                    <FolderOpen size={15} />
-                    Abrir documento<kbd>Ctrl O</kbd>
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      void fileOps.saveNote(activeId)
-                      setMenu(false)
-                    }}
-                  >
-                    <Save size={15} />
-                    Salvar<kbd>Ctrl S</kbd>
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      void fileOps.saveNote(activeId, true)
-                      setMenu(false)
-                    }}
-                  >
-                    <Save size={15} />
-                    Salvar como<kbd>Ctrl Shift S</kbd>
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setFind('find')
-                      setMenu(false)
-                    }}
-                  >
-                    <Search size={15} />
-                    Pesquisar<kbd>Ctrl F</kbd>
-                  </button>
-                  <button
-                    role="menuitem"
-                    onClick={() => {
-                      setSettings(true)
-                      setMenu(false)
-                    }}
-                  >
-                    <Settings2 size={15} />
-                    Configurações
-                  </button>
-                </div>
+                  <X size={13} />
+                </IconButton>
+              </div>
+            ))}
+            <IconButton label={`Nova guia (${newTabShortcut})`} onClick={() => newNote()}>
+              <Plus size={16} />
+            </IconButton>
+          </div>
+        )}
+        <div className="document-area">
+          <div className="document-toolbar chrome">
+            <div className="document-navigation">
+              {!preferences.sidebarVisible && (
+                <IconButton
+                  label="Mostrar navegação"
+                  onClick={() =>
+                    setPreferences((current) => ({ ...current, sidebarVisible: true }))
+                  }
+                >
+                  <PanelLeftOpen size={17} />
+                </IconButton>
               )}
+              <div className="document-menu-wrapper">
+                <button
+                  className="document-menu"
+                  aria-expanded={menu}
+                  onClick={() => setMenu((value) => !value)}
+                >
+                  <FileText size={15} />
+                  <span>{activeNote.path ? activeNote.title : 'Rascunho'}</span>
+                  <ChevronDown size={13} />
+                </button>
+                {menu && (
+                  <div
+                    ref={menuRef}
+                    className="dropdown"
+                    role="menu"
+                    onKeyDown={(event) => {
+                      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return
+                      event.preventDefault()
+                      const items = [
+                        ...event.currentTarget.querySelectorAll<HTMLButtonElement>(
+                          '[role=menuitem]',
+                        ),
+                      ]
+                      const index = items.indexOf(document.activeElement as HTMLButtonElement)
+                      const next =
+                        event.key === 'Home'
+                          ? 0
+                          : event.key === 'End'
+                            ? items.length - 1
+                            : (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) %
+                              items.length
+                      items[next]?.focus()
+                    }}
+                  >
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        newNote()
+                        setMenu(false)
+                      }}
+                    >
+                      <Plus size={15} />
+                      Nova nota<kbd>Ctrl N</kbd>
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        void fileOps.openDocument()
+                        setMenu(false)
+                      }}
+                    >
+                      <FolderOpen size={15} />
+                      Abrir documento<kbd>Ctrl O</kbd>
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        void fileOps.saveNote(activeId)
+                        setMenu(false)
+                      }}
+                    >
+                      <Save size={15} />
+                      Salvar<kbd>Ctrl S</kbd>
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        void fileOps.saveNote(activeId, true)
+                        setMenu(false)
+                      }}
+                    >
+                      <Save size={15} />
+                      Salvar como<kbd>Ctrl Shift S</kbd>
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setFind('find')
+                        setMenu(false)
+                      }}
+                    >
+                      <Search size={15} />
+                      Pesquisar<kbd>Ctrl F</kbd>
+                    </button>
+                    <button
+                      role="menuitem"
+                      onClick={() => {
+                        setSettings(true)
+                        setMenu(false)
+                      }}
+                    >
+                      <Settings2 size={15} />
+                      Configurações
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="document-actions">
+              {!tabsVisible && (
+                <IconButton label={`Nova guia (${newTabShortcut})`} onClick={() => newNote()}>
+                  <Plus size={16} />
+                </IconButton>
+              )}
               <ProjectAssignment
                 projects={projects}
                 value={activeNote.projectId}

@@ -69,7 +69,16 @@ export function useDocuments(options: Options) {
         projectId:
           current.current.documents.find((item) => item.path === read.path)?.projectId ?? null,
       }
-      setNotes((existing) => [...existing, note])
+      setNotes((existing) => {
+        const first = existing[0]
+        const replaceEmpty =
+          existing.length === 1 &&
+          !first.path &&
+          !first.dirty &&
+          !first.projectId &&
+          current.current.editors.current.get(first.id)?.isEmpty === true
+        return replaceEmpty ? [note] : [...existing, note]
+      })
       setActiveId(note.id)
       if (unavailable)
         notify(

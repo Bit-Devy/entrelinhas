@@ -41,6 +41,58 @@ function setup(format: 'md' | 'txt' = 'md') {
 
 beforeEach(() => vi.clearAllMocks())
 
+it.each([false, true])('abrir o primeiro arquivo preserva texto existente: %s', async (hasText) => {
+  const { note, editor, options, hook } = setup()
+  if (!hasText) editor.commands.clearContent()
+  vi.mocked(backend.read).mockResolvedValue({
+    path: '/tmp/aberto.md',
+    title: 'aberto.md',
+    content: 'Arquivo aberto',
+    format: 'md',
+    version: 'v1',
+  })
+  await act(async () => {
+    expect(await hook.result.current.openPath('/tmp/aberto.md')).toBe(true)
+  })
+  const updater = options.setNotes.mock.calls[0][0]
+  const result = updater([note])
+  expect(result).toHaveLength(hasText ? 2 : 1)
+  expect(result.at(-1).path).toBe('/tmp/aberto.md')
+  if (hasText) expect(result[0].id).toBe(note.id)
+  hook.unmount()
+  editor.destroy()
+})
+
+it('não substitui a nota se o usuário escrever enquanto o arquivo carrega', async () => {
+  const { note, editor, options, hook } = setup()
+  editor.commands.clearContent()
+  let finish!: (value: Awaited<ReturnType<typeof backend.read>>) => void
+  vi.mocked(backend.read).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+  )
+  let opening!: Promise<boolean>
+  act(() => {
+    opening = hook.result.current.openPath('/tmp/aberto.md')
+  })
+  editor.commands.insertContent('Continuei escrevendo')
+  await act(async () => {
+    finish({
+      path: '/tmp/aberto.md',
+      title: 'aberto.md',
+      content: 'Arquivo aberto',
+      format: 'md',
+      version: 'v1',
+    })
+    await opening
+  })
+  expect(options.setNotes.mock.calls[0][0]([note])).toHaveLength(2)
+  hook.unmount()
+  editor.destroy()
+})
+
 it('digitar e desmontar não grava o rascunho nem chama o backend', () => {
   const { editor, hook } = setup()
   editor.commands.insertContent('Rascunho secreto')

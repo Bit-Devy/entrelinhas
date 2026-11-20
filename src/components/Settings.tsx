@@ -290,6 +290,7 @@ export function Settings({
                         'Ctrl+V',
                         'Ctrl+X',
                         'Ctrl+A',
+                        'Ctrl+T',
                         'Ctrl+TAB',
                         'Ctrl+Shift+TAB',
                         'Ctrl+Q',
@@ -324,6 +325,8 @@ export function Settings({
                 F11 · tela cheia &nbsp; Esc · revelar controles
                 <br />
                 Ctrl+Tab · próxima aba &nbsp; Ctrl+Shift+Tab · aba anterior
+                <br />
+                Ctrl+T · nova guia · As guias aparecem a partir da segunda nota.
               </p>
             </>
           )}

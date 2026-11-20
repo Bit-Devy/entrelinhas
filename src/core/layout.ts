@@ -5,7 +5,11 @@ type LayoutPreferences = Pick<
   'sidebarVisible' | 'sidebarWidth' | 'sidebarSide' | 'tabsPosition' | 'editorWidth'
 >
 
-export function getWritingLayout(windowWidth: number, preferences: LayoutPreferences) {
+export function getWritingLayout(
+  windowWidth: number,
+  preferences: LayoutPreferences,
+  tabsVisible = true,
+) {
   const padding = 32
   const minimumWritingWidth = 320
   const sidebarWidth = preferences.sidebarVisible
@@ -14,7 +18,7 @@ export function getWritingLayout(windowWidth: number, preferences: LayoutPrefere
         Math.max(160, (windowWidth - minimumWritingWidth) / 2 - padding),
       )
     : 0
-  const tabWidth = windowWidth <= 900 ? 120 : 155
+  const tabWidth = tabsVisible ? (windowWidth <= 900 ? 120 : 155) : 0
   let tabsPosition = preferences.tabsPosition
   const edges = (position: Preferences['tabsPosition']) => ({
     left:

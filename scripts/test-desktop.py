@@ -201,7 +201,7 @@ def main():
             assert app.editor('return editor.getText()') == ''
             assert app.js('return document.title') == 'Entrelinhas'
             assert app.js('return document.querySelector(".brand").children.length') == 1
-            assert app.js('return document.querySelectorAll("[role=tab]").length') == 1
+            assert app.js('return document.querySelectorAll("[role=tab]").length') == 0
             passed('inicialização em nota vazia')
             original_rect = app.call('/window/rect')
             for width in (720, 1500):
@@ -284,11 +284,19 @@ def main():
             assert not app.editor('return editor.getText().includes("ALTERAÇÃO_NÃO_SALVA")')
             passed('projetos persistem; alterações de documentos exigem salvamento manual')
             app.click('.document-entry')
-            assert app.js('return document.querySelectorAll("[role=tab]").length') == 2
-            app.key('n', ctrl=True)
-            wait(lambda: app.js('return document.querySelectorAll("[role=tab]").length') == 3, 'nova aba')
+            assert app.js('return document.querySelectorAll(".editor-scroll").length') == 1
+            assert not app.js('return !!document.querySelector("[role=tablist]")')
+            app.click('[aria-label^="Nova guia"]')
+            wait(lambda: app.js('return document.querySelectorAll("[role=tab]").length') == 2, 'mostrar guias ao criar segunda nota')
             app.key('w', ctrl=True)
-            wait(lambda: app.js('return document.querySelectorAll("[role=tab]").length') == 2, 'fechar aba')
+            wait(lambda: app.js('return !document.querySelector("[role=tablist]")'), 'ocultar guias ao voltar para uma nota')
+            app.key('t', ctrl=True)
+            wait(lambda: app.js('return document.querySelectorAll("[role=tab]").length') == 2, 'Ctrl+T cria segunda guia')
+            app.key('w', ctrl=True)
+            wait(lambda: app.js('return !document.querySelector("[role=tablist]")'), 'ocultar guias')
+            app.click('[aria-label="Ocultar navegação"]')
+            app.click('[aria-label="Mostrar navegação"]')
+            assert app.js('return !document.querySelector(".app").classList.contains("sidebar-hidden")')
             passed('abas, atalhos e abertura sem duplicação')
             app.click('.document-entry')
             app.key('h', ctrl=True)
@@ -403,11 +411,11 @@ def main():
             app.key('w', ctrl=True)
             wait(lambda: app.js('return document.body.innerText.includes("Salvar antes de fechar?")'), 'confirmação configurável')
             app.js('return [...document.querySelectorAll(".modal-actions button")].find(button=>button.innerText==="Cancelar").click()')
-            assert app.js('return document.querySelectorAll("[role=tab]").length') == 2
+            assert app.js('return document.querySelectorAll(".editor-scroll").length') == 1
             app.key('w', ctrl=True)
             wait(lambda: app.js('return document.body.innerText.includes("Salvar antes de fechar?")'), 'confirmação de descarte')
             app.js('return [...document.querySelectorAll(".modal-actions button")].find(button=>button.innerText==="Descartar").click()')
-            wait(lambda: app.js('return document.querySelectorAll("[role=tab]").length') == 1, 'descartar aba')
+            wait(lambda: app.editor('return editor.getText()') == "", 'descartar nota')
             passed('confirmação de descarte opcional respeita cancelar e descartar')
             app.click('[aria-label="Configurações"]')
             app.js('return [...document.querySelectorAll(".settings-nav button")].find(button=>button.innerText==="Comportamento").click()')

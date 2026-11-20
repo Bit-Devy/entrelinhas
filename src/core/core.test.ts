@@ -69,6 +69,17 @@ describe('preferências e atalhos', () => {
       shortcutAction(new KeyboardEvent('keydown', { key: 'J', ctrlKey: true, shiftKey: true }), p),
     ).toBe('immersive')
   })
+  it('abre uma guia com Ctrl+T e preserva atalhos personalizados anteriores', () => {
+    const event = new KeyboardEvent('keydown', { key: 't', ctrlKey: true })
+    expect(shortcutAction(event, defaultPreferences)).toBe('new')
+    expect(shortcutAction(event, readPreferences({ shortcuts: { find: 'Ctrl+T' } }))).toBe('find')
+    expect(
+      shortcutAction(
+        new KeyboardEvent('keydown', { key: 't', ctrlKey: true, isComposing: true }),
+        defaultPreferences,
+      ),
+    ).toBeNull()
+  })
 })
 
 describe('primeira escolha de tema', () => {
