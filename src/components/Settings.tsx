@@ -12,6 +12,7 @@ import {
 import { ThemeChoices } from './ThemeChoices'
 import { AppIcon } from './AppIcon'
 import { Modal } from './ui'
+import { Select } from './Select'
 import { eventShortcut } from '../core/shortcuts'
 import type { Preferences, ShortcutAction } from '../core/types'
 
@@ -81,28 +82,32 @@ export function Settings({
               <h4>Layout</h4>
               <label className="setting-row">
                 <span>Posição da navegação</span>
-                <select
+                <Select
+                  label="Posição da navegação"
                   value={p.sidebarSide}
-                  onChange={(event) =>
-                    onChange({ sidebarSide: event.target.value as Preferences['sidebarSide'] })
+                  options={[
+                    { value: 'left', label: 'Esquerda' },
+                    { value: 'right', label: 'Direita' },
+                  ]}
+                  onChange={(value) =>
+                    onChange({ sidebarSide: value as Preferences['sidebarSide'] })
                   }
-                >
-                  <option value="left">Esquerda</option>
-                  <option value="right">Direita</option>
-                </select>
+                />
               </label>
               <label className="setting-row">
                 <span>Posição das abas</span>
-                <select
+                <Select
+                  label="Posição das abas"
                   value={p.tabsPosition}
-                  onChange={(event) =>
-                    onChange({ tabsPosition: event.target.value as Preferences['tabsPosition'] })
+                  options={[
+                    { value: 'top', label: 'Superior' },
+                    { value: 'left', label: 'Lateral esquerda' },
+                    { value: 'right', label: 'Lateral direita' },
+                  ]}
+                  onChange={(value) =>
+                    onChange({ tabsPosition: value as Preferences['tabsPosition'] })
                   }
-                >
-                  <option value="top">Superior</option>
-                  <option value="left">Lateral esquerda</option>
-                  <option value="right">Lateral direita</option>
-                </select>
+                />
               </label>
               <p className="muted small">
                 Em janelas estreitas, as abas laterais voltam ao topo para preservar o espaço de
@@ -115,16 +120,16 @@ export function Settings({
               <h3>Um ritmo confortável.</h3>
               <label className="setting-row">
                 <span>Fonte da escrita</span>
-                <select
+                <Select
+                  label="Fonte da escrita"
                   value={p.fontFamily}
-                  onChange={(event) =>
-                    onChange({ fontFamily: event.target.value as Preferences['fontFamily'] })
-                  }
-                >
-                  <option value="serif">Serifada · Noto Serif</option>
-                  <option value="sans">Sem serifa · Ubuntu</option>
-                  <option value="mono">Monoespaçada</option>
-                </select>
+                  options={[
+                    { value: 'serif', label: 'Serifada · Noto Serif' },
+                    { value: 'sans', label: 'Sem serifa · Ubuntu' },
+                    { value: 'mono', label: 'Monoespaçada' },
+                  ]}
+                  onChange={(value) => onChange({ fontFamily: value as Preferences['fontFamily'] })}
+                />
               </label>
               <label className="setting-row">
                 <span>
@@ -228,15 +233,17 @@ export function Settings({
               </p>
               <label className="setting-row">
                 <span>Formato de novas notas</span>
-                <select
+                <Select
+                  label="Formato de novas notas"
                   value={p.defaultFormat}
-                  onChange={(event) =>
-                    onChange({ defaultFormat: event.target.value as Preferences['defaultFormat'] })
+                  options={[
+                    { value: 'md', label: 'Markdown (.md)' },
+                    { value: 'txt', label: 'Texto simples (.txt)' },
+                  ]}
+                  onChange={(value) =>
+                    onChange({ defaultFormat: value as Preferences['defaultFormat'] })
                   }
-                >
-                  <option value="md">Markdown (.md)</option>
-                  <option value="txt">Texto simples (.txt)</option>
-                </select>
+                />
               </label>
               <div className="info-card">
                 Imagens ficam em memória até o salvamento. Ao salvar em Markdown, os recursos vão

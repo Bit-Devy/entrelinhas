@@ -89,6 +89,10 @@ class Desktop:
     def click(self, css):
         self.call('/element/' + self.element(css) + '/click', {})
 
+    def choose(self, label, value):
+        self.click(f'[role="combobox"][aria-label="{label}"]')
+        self.click(f'.select-options [role="option"][data-value="{value}"]')
+
     def keys(self, css, text):
         self.call('/element/' + self.element(css) + '/value', {'text': text})
 
@@ -324,6 +328,14 @@ def main():
                 app.js('return [...document.querySelectorAll(".theme-choice")].find(button=>button.innerText.includes(arguments[0])).click()', label)
                 wait(lambda: app.js('return document.documentElement.dataset.theme') == theme, 'tema ' + theme)
                 wait(lambda: app.ipc('plugin:window|theme', label='main') == ('light' if theme == 'light' else 'dark'), 'tema dos diálogos nativos')
+                app.click('[role="combobox"][aria-label="Posição da navegação"]')
+                expected_surface = {'light':'rgb(255, 255, 255)', 'dark':'rgb(36, 38, 42)', 'sepia':'rgb(51, 46, 39)'}[theme]
+                assert app.js('return getComputedStyle(document.querySelector(".select-options")).backgroundColor') == expected_surface
+                assert app.js('return document.querySelectorAll("select").length') == 0
+                app.screenshot(output / f'select-{theme}.png')
+                app.keys('[role="combobox"][aria-label="Posição da navegação"]', '\ue00c')
+                assert app.js('return !!document.querySelector("[role=dialog][aria-label=Configurações]")')
+                assert not app.js('return !!document.querySelector(".select-options")')
                 app.click('[aria-label="Fechar painel"]')
                 app.reveal()
                 app.editor('editor.commands.setTextSelection(1);editor.commands.blur();return true')
@@ -353,8 +365,8 @@ def main():
             assert app.js('return document.querySelector(".editor-scroll").dataset.cursor') == 'thin'
             passed('três temas, três cursores, capturas reais e preferências entre execuções')
             app.click('[aria-label="Configurações"]')
-            app.js('document.querySelectorAll(".settings-content select")[0].value="right";document.querySelectorAll(".settings-content select")[0].dispatchEvent(new Event("change",{bubbles:true}));')
-            app.js('document.querySelectorAll(".settings-content select")[1].value="left";document.querySelectorAll(".settings-content select")[1].dispatchEvent(new Event("change",{bubbles:true}));')
+            app.choose("Posição da navegação", "right")
+            app.choose("Posição das abas", "left")
             app.click('[aria-label="Fechar painel"]')
             assert app.js('return document.querySelector(".app").classList.contains("sidebar-right")')
             assert app.js('return document.querySelector(".app").classList.contains("tabs-left")')
@@ -401,7 +413,7 @@ def main():
             app.js('return [...document.querySelectorAll(".settings-nav button")].find(button=>button.innerText==="Comportamento").click()')
             app.js('document.querySelectorAll(".settings-content input.switch")[1].click()')
             app.js('return [...document.querySelectorAll(".settings-nav button")].find(button=>button.innerText==="Arquivos").click()')
-            app.js('const select=document.querySelector(".settings-content select");select.value="txt";select.dispatchEvent(new Event("change",{bubbles:true}));')
+            app.choose("Formato de novas notas", "txt")
             app.click('[aria-label="Fechar painel"]')
             app.key('n', ctrl=True)
             wait(lambda: app.js('return document.querySelector(".window-title").innerText.includes("TXT")'), 'formato padrão TXT')

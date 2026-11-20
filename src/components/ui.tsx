@@ -37,11 +37,12 @@ export function Modal({
     const node = ref.current!
     const first =
       node.querySelector<HTMLElement>('[autofocus]') ??
-      node.querySelector<HTMLElement>('input, select, textarea') ??
+      node.querySelector<HTMLElement>('input, [role="combobox"], textarea') ??
       node.querySelector<HTMLElement>('button')
     first?.focus({ preventScroll: true })
     const handle = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        if ((event.target as HTMLElement).closest('[role="combobox"][aria-expanded="true"]')) return
         event.stopPropagation()
         event.preventDefault()
         if (dismissible) closeRef.current()

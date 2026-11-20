@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { ColorPicker } from './ColorPicker'
 import { IconButton } from './ui'
+import { Select } from './Select'
 
 export function Formatting({
   editor,
@@ -88,8 +89,8 @@ export function Formatting({
           event.preventDefault()
       }}
     >
-      <select
-        aria-label="Estilo do parágrafo"
+      <Select
+        label="Estilo do parágrafo"
         value={
           editor.isActive('heading', { level: 1 })
             ? '1'
@@ -99,17 +100,18 @@ export function Formatting({
                 ? '3'
                 : 'p'
         }
-        onChange={(event) => {
-          const level = Number(event.target.value) as 1 | 2 | 3
-          if (event.target.value === 'p') editor.chain().focus().setParagraph().run()
+        onChange={(value) => {
+          const level = Number(value) as 1 | 2 | 3
+          if (value === 'p') editor.chain().focus().setParagraph().run()
           else editor.chain().focus().toggleHeading({ level }).run()
         }}
-      >
-        <option value="p">Texto</option>
-        <option value="1">Título 1</option>
-        <option value="2">Título 2</option>
-        <option value="3">Título 3</option>
-      </select>
+        options={[
+          { value: 'p', label: 'Texto' },
+          { value: '1', label: 'Título 1' },
+          { value: '2', label: 'Título 2' },
+          { value: '3', label: 'Título 3' },
+        ]}
+      />
       <span className="tool-divider" />
       {tools.map((tool) => (
         <IconButton
@@ -137,22 +139,22 @@ export function Formatting({
               editor.commands.focus()
             }}
           />
-          <select
-            aria-label="Tamanho do texto selecionado"
+          <Select
+            label="Tamanho do texto selecionado"
             value={editor.getAttributes('textStyle').fontSize || ''}
-            onChange={(event) =>
-              event.target.value
-                ? editor.chain().focus().setFontSize(event.target.value).run()
+            onChange={(value) =>
+              value
+                ? editor.chain().focus().setFontSize(value).run()
                 : editor.chain().focus().unsetFontSize().run()
             }
-          >
-            <option value="">Tamanho</option>
-            {[12, 14, 16, 18, 20, 24, 28, 32, 40, 48].map((size) => (
-              <option key={size} value={`${size}px`}>
-                {size}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: '', label: 'Tamanho' },
+              ...[12, 14, 16, 18, 20, 24, 28, 32, 40, 48].map((size) => ({
+                value: `${size}px`,
+                label: String(size),
+              })),
+            ]}
+          />
           <span className="tool-divider" />
           <IconButton
             label="Lista com marcadores"
@@ -232,25 +234,26 @@ export function Formatting({
             <Table2 size={16} />
           </IconButton>
           {editor.isActive('table') && (
-            <select
-              aria-label="Editar tabela"
+            <Select
+              label="Editar tabela"
               value=""
-              onChange={(event) => {
+              onChange={(value) => {
                 const commands = editor.chain().focus()
-                if (event.target.value === 'row') commands.addRowAfter().run()
-                if (event.target.value === 'column') commands.addColumnAfter().run()
-                if (event.target.value === 'delete-row') commands.deleteRow().run()
-                if (event.target.value === 'delete-column') commands.deleteColumn().run()
-                if (event.target.value === 'delete') commands.deleteTable().run()
+                if (value === 'row') commands.addRowAfter().run()
+                if (value === 'column') commands.addColumnAfter().run()
+                if (value === 'delete-row') commands.deleteRow().run()
+                if (value === 'delete-column') commands.deleteColumn().run()
+                if (value === 'delete') commands.deleteTable().run()
               }}
-            >
-              <option value="">Tabela</option>
-              <option value="row">Adicionar linha</option>
-              <option value="column">Adicionar coluna</option>
-              <option value="delete-row">Remover linha</option>
-              <option value="delete-column">Remover coluna</option>
-              <option value="delete">Remover tabela</option>
-            </select>
+              options={[
+                { value: '', label: 'Tabela' },
+                { value: 'row', label: 'Adicionar linha' },
+                { value: 'column', label: 'Adicionar coluna' },
+                { value: 'delete-row', label: 'Remover linha' },
+                { value: 'delete-column', label: 'Remover coluna' },
+                { value: 'delete', label: 'Remover tabela' },
+              ]}
+            />
           )}
           <span className="tool-divider" />
           <IconButton label="Desfazer (Ctrl+Z)" onClick={() => editor.chain().focus().undo().run()}>
