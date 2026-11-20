@@ -213,3 +213,5 @@ h2, h3, h4, p { margin-top: 0; }
 .toast button { padding: 0; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
 @media (max-width: 900px) { .app { --sidebar-width: 204px !important; } .sidebar-hidden { --sidebar-width: 0px !important; } .nav-button kbd { display: none; } .editor-scroll { padding-left: 32px; padding-right: 25px; } .document-caption { width: calc(100% - 64px); } .tabs-left .tabs, .tabs-right .tabs { flex-basis: 120px; width: 120px; } .word-count { font-size: 9px; } .statusbar { padding: 0 15px; } .status-right { gap: 8px; } }
+.tiptap:focus-visible { outline: none; }
+.dialog-message { font-size: 13px; line-height: 1.8; color: var(--muted); white-space: pre-line; }
