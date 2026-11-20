@@ -286,7 +286,11 @@ export default function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme
     document.documentElement.style.colorScheme = preferences.theme === 'light' ? 'light' : 'dark'
-  }, [preferences.theme])
+    if (isTauri())
+      void getCurrentWindow()
+        .setTheme(preferences.theme === 'light' ? 'light' : 'dark')
+        .catch((error) => notify(errorMessage(error)))
+  }, [preferences.theme, notify])
   useEffect(() => {
     const handle = (event: KeyboardEvent) => {
       if (event.isComposing) return
@@ -839,7 +843,7 @@ export default function App() {
         )}
       <WindowResize onError={notify} />
       {notice && (
-        <div className="toast" role="status">
+        <div className="toast chrome" role="status">
           {notice}
           <button aria-label="Dispensar aviso" onClick={() => setNotice('')}>
             <X size={14} />

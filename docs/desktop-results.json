@@ -1,0 +1,23 @@
+{
+  "passed": 16,
+  "checks": [
+    "inicialização em nota vazia",
+    "imersão, cursor em bloco, posição estável e Esc",
+    "fechar e reabrir descarta rascunhos sem recuperação",
+    "Ctrl+S e seletor GNOME gravam Markdown em Downloads e associam projeto",
+    "projetos persistem; alterações de documentos exigem salvamento manual",
+    "abas, atalhos e abertura sem duplicação",
+    "localizar e substituir",
+    "imagens em memória até salvar e referências relativas reais",
+    "três temas, três cursores, capturas reais e preferências entre execuções",
+    "navegação à direita e abas laterais",
+    "F11 alterna a tela cheia nativa",
+    "conflitos externos preservam o arquivo ao cancelar",
+    "busca global lê o conteúdo salvo no disco",
+    "confirmação de descarte opcional respeita cancelar e descartar",
+    "formato padrão TXT e salvamento textual real",
+    "composição preserva atalhos; documento longo (280000 caracteres) em 0.44s"
+  ],
+  "engine": "Tauri 2 / WebKitGTK",
+  "platform": "Ubuntu 26.10 / Wayland"
+}

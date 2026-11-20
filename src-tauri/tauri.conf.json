@@ -19,7 +19,9 @@
         "minWidth": 720,
         "minHeight": 480,
         "decorations": false,
-        "dragDropEnabled": false
+        "dragDropEnabled": false,
+        "transparent": true,
+        "backgroundColor": "#00000000"
       }
     ],
     "security": {
@@ -39,6 +41,10 @@
       "icons/icon.ico",
       "icons/icon.icns"
     ],
-    "linux": { "deb": { "desktopTemplate": "resources/entrelinhas.desktop" } }
+    "linux": {
+      "deb": {
+        "desktopTemplate": "resources/entrelinhas.desktop"
+      }
+    }
   }
 }

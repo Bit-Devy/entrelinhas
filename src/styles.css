@@ -1653,3 +1653,13 @@ p {
   height: auto;
   flex: 0 0 auto;
 }
+/* A superfície transparente permite cantos arredondados no compositor do GNOME. */
+html:root,
+body,
+#root {
+  background: transparent;
+}
+.app {
+  border-radius: 12px;
+  overflow: hidden;
+}

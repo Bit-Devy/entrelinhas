@@ -59,6 +59,7 @@ class Desktop:
     def start(self):
         result = self.request('/session', {'capabilities': {'alwaysMatch': {'tauri:options': {'application': str(self.application)}}}})
         self.session = result['sessionId']
+        self.call('/timeouts', {'implicit': 3000})
         wait(lambda: self.js('return !!document.querySelector(".tiptap")?.editor'), 'editor inicial')
         wait(lambda: self.ipc('load_library') is not None, 'SQLite')
 
@@ -176,7 +177,8 @@ def main():
             assert app.js('return document.querySelectorAll("[role=tab]").length') == 1
             passed('inicialização em nota vazia')
             before = app.js('return document.querySelector(".tiptap").getBoundingClientRect().toJSON()')
-            app.keys('.tiptap', 'RASCUNHO_DESCARTADO_739 Português 日本語')
+            secret = 'Há um espaço de silêncio entre uma ideia e outra. 日本語'
+            app.keys('.tiptap', secret)
             wait(lambda: app.js('return document.querySelector(".app").classList.contains("immersive")'), 'imersão automática')
             after = app.js('return document.querySelector(".tiptap").getBoundingClientRect().toJSON()')
             assert before['left'] == after['left'] and before['top'] == after['top']
@@ -192,7 +194,7 @@ def main():
             assert app.editor('return editor.getText()') == ''
             for path in data_home.rglob('*'):
                 if path.is_file():
-                    assert b'RASCUNHO_DESCARTADO_739' not in path.read_bytes(), str(path)
+                    assert secret.encode('utf-8') not in path.read_bytes(), str(path)
             passed('fechar e reabrir descarta rascunhos sem recuperação')
             app.click('[aria-label="Criar projeto"]')
             app.keys('.modal input[maxlength="120"]', 'Caderno de ideias')
@@ -212,8 +214,10 @@ def main():
             assert library['documents'][0]['path'] == str(note_path)
             assert '# O que cabe entre as linhas' in note_path.read_text()
             passed('Ctrl+S e seletor GNOME gravam Markdown em Downloads e associam projeto')
-            app.editor('editor.commands.insertContent(" ALTERAÇÃO_NÃO_SALVA");return true')
+            app.keys('.editor-scroll:not(.inactive) .tiptap', ' ALTERAÇÃO_NÃO_SALVA')
+            wait(lambda: app.js('return !document.querySelector(".toast") || getComputedStyle(document.querySelector(".toast")).visibility==="hidden"'), 'ocultar avisos durante a digitação')
             assert 'ALTERAÇÃO_NÃO_SALVA' not in note_path.read_text()
+            app.reveal()
             app.click('[aria-label="Fechar aplicativo"]')
             time.sleep(.3)
             app.stop()
@@ -222,7 +226,8 @@ def main():
             library = app.ipc('load_library')
             assert library['projects'][0]['id'] == project_id
             assert library['documents'][0]['path'] == str(note_path)
-            app.click('.project-toggle')
+            if app.js('return document.querySelector(".project-toggle").getAttribute("aria-expanded")') == 'false':
+                app.click('.project-toggle')
             app.click('.document-entry')
             wait(lambda: app.editor('return editor.getText().includes("O que cabe")'), 'reabrir Markdown')
             assert not app.editor('return editor.getText().includes("ALTERAÇÃO_NÃO_SALVA")')
@@ -263,6 +268,7 @@ def main():
             for theme, label in [('light', 'Claro'), ('dark', 'Escuro'), ('sepia', 'Sépia Noturno')]:
                 app.js('return [...document.querySelectorAll(".theme-choice")].find(button=>button.innerText.includes(arguments[0])).click()', label)
                 wait(lambda: app.js('return document.documentElement.dataset.theme') == theme, 'tema ' + theme)
+                wait(lambda: app.ipc('plugin:window|theme', label='main') == ('light' if theme == 'light' else 'dark'), 'tema dos diálogos nativos')
                 app.click('[aria-label="Fechar painel"]')
                 app.reveal()
                 app.editor('editor.commands.setTextSelection(1);editor.commands.blur();return true')
@@ -294,9 +300,11 @@ def main():
             wait(lambda: app.ipc('plugin:window|is_fullscreen', label='main'), 'entrar em tela cheia')
             app.key('F11')
             wait(lambda: not app.ipc('plugin:window|is_fullscreen', label='main'), 'sair da tela cheia')
+            time.sleep(.6)  # O compositor ainda pode estar animando a saída.
             passed('F11 alterna a tela cheia nativa')
             # Compara alterações externas usando o arquivo já salvo.
-            app.click('.project-toggle')
+            if app.js('return document.querySelector(".project-toggle").getAttribute("aria-expanded")') == 'false':
+                app.click('.project-toggle')
             app.click('.document-entry')
             wait(lambda: app.editor('return editor.getText().includes("O que cabe")'), 'abrir documento antes do conflito')
             app.editor('editor.commands.insertContent(" texto local");return true')
