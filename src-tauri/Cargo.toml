@@ -23,6 +23,7 @@ rusqlite = { version = "0.38", features = ["bundled"] }
 sha2 = "0.10"
 base64 = "0.22"
 tempfile = "3"
+tauri-plugin-window-state = "2.5.0"
 
 [profile.dev]
 debug = 0
