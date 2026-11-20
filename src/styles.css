@@ -1903,3 +1903,13 @@ body,
   font-size: 11px;
   line-height: 1.7;
 }
+/* O foco pertence ao campo completo, sem um segundo contorno dentro dele. */
+.project-filter input:focus-visible,
+.color-hex-field input:focus-visible {
+  outline: none;
+}
+.project-filter:focus-within,
+.color-hex-field:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 14%, transparent);
+}

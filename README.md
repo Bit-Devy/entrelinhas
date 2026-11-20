@@ -14,9 +14,11 @@ Entrelinhas é um editor **desktop de verdade**, feito com Tauri 2, React e Type
 - Projetos lógicos com nome, cor, ícone opcional e referências a documentos externos.
 - Abas reordenáveis; conteúdo, seleção e histórico de edição mantidos ao alternar entre elas.
 - Interface imersiva automática, alternância manual, acesso por Esc e aproximação das bordas.
-- Três temas: Claro, Escuro e Sépia Noturno.
+- Três temas: Claro, Escuro e Sépia Noturno, com escolha na primeira abertura e respeito às preferências de instalações anteriores.
+- Coluna de escrita centralizada na janela inteira, com limite de largura e posição estável ao esconder os controles.
+- Seletores de projeto e de cor próprios, com o tema do aplicativo e fundo desfocado.
 - Cursor em bloco, fino ou invisível; fonte, tamanho, largura, zoom e entrelinha configuráveis.
-- Navegação à esquerda ou à direita, redimensionável; abas superiores ou laterais.
+- Navegação à esquerda ou à direita, redimensionável; abas superiores ou laterais. Em janelas estreitas, as abas voltam ao topo para manter uma coluna confortável.
 - Busca e substituição no documento; busca por nome e conteúdo nos arquivos salvos registrados.
 - Funcionamento local e offline, sem conta, servidor ou sincronização obrigatória.
 
@@ -58,7 +60,7 @@ As capturas abaixo são da janela Tauri real, executada no Ubuntu 26.10 com Wayl
 | ------------------------------------ | ------------------------------------ | -------------------------------------------- |
 | ![Claro](docs/screenshots/light.png) | ![Escuro](docs/screenshots/dark.png) | ![Sépia Noturno](docs/screenshots/sepia.png) |
 
-[Ver o modo imersivo](docs/screenshots/imersivo.png).
+[Ver o modo imersivo](docs/screenshots/imersivo.png) · [Escolha inicial de tema](docs/screenshots/welcome.png) · [Seletor de cores no Sépia Noturno](docs/screenshots/color-sepia.png) · [Seleção de projeto](docs/screenshots/project-picker.png).
 
 Os seletores nativos acompanham o modo claro ou escuro do aplicativo; Sépia Noturno usa a variante escura do GTK.
 
@@ -70,12 +72,12 @@ O projeto foi compilado e verificado no **Ubuntu 26.10, x86_64, GNOME/Wayland**.
 
 ### Pacote Debian
 
-[Baixe o instalador e os checksums da versão 0.1.0](https://github.com/Bit-Devy/entrelinhas/releases/tag/v0.1.0).
+[Baixe o instalador e os checksums da versão 0.2.0](https://github.com/Bit-Devy/entrelinhas/releases/tag/v0.2.0).
 
 Para instalar um pacote compilado localmente:
 
 ```bash
-sudo apt install ./src-tauri/target/release/bundle/deb/*.deb
+sudo apt install ./src-tauri/target/release/bundle/deb/Entrelinhas_0.2.0_amd64.deb
 ```
 
 O aplicativo aparece no menu como **Entrelinhas**, com ícone próprio. O pacote depende do WebKitGTK 4.1 e GTK 3 do sistema. Uma compilação feita no Ubuntu 26.10 não garante compatibilidade binária com versões anteriores do Ubuntu; para elas, compile no sistema de destino.
@@ -154,9 +156,9 @@ python3 scripts/test-desktop.py --binary src-tauri/target/release/entrelinhas
 
 ### Verificações realizadas
 
-- **20 testes TypeScript:** notas, abas, descarte, preferências, atalhos, Markdown, formatação, TXT, Unicode, busca, imagens, gravação explícita, conflitos e espera de gravações em andamento.
+- **46 testes TypeScript:** notas, abas, descarte, preferências, atalhos, Markdown, formatação, TXT, Unicode, busca, imagens, gravação explícita, conflitos, espera de gravações, centralização com diferentes painéis, seletores próprios e primeira escolha de tema.
 - **6 testes Rust:** gravação atômica, conflitos, UTF-8, nomes internacionais, imagens relativas, arquivos somente leitura, recursos inválidos, projetos em Downloads, exclusão sem apagar documentos, localização e busca.
-- **16 verificações desktop:** inicialização, ocultação sem deslocamento, Esc, descarte após reiniciar, Ctrl+S com seletor GNOME, associação externa, abas, busca/substituição, colagem de imagens, temas, cursores, persistência, layout, F11, conflitos, busca global, confirmação opcional e TXT.
+- **20 verificações desktop:** inicialização, ocultação sem deslocamento, Esc, descarte após reiniciar, Ctrl+S com seletor GNOME, associação externa, abas, busca/substituição, colagem de imagens, temas, cursores, persistência, layout, F11, conflitos, busca global, confirmação opcional, TXT, paleta de cores nos três temas, primeira abertura e centralização ao redimensionar.
 - O roteiro desktop também passou no **executável otimizado de produção, com o Vite desligado**.
 - Documento de **280 mil caracteres** carregado e editado no roteiro desktop. O tempo medido inclui definir o conteúdo e inserir texto; não representa um benchmark de latência por tecla.
 

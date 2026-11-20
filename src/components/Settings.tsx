@@ -1,3 +1,4 @@
+import { version } from '../../package.json'
 import { useState } from 'react'
 import {
   Paintbrush,
@@ -103,6 +104,10 @@ export function Settings({
                   <option value="right">Lateral direita</option>
                 </select>
               </label>
+              <p className="muted small">
+                Em janelas estreitas, as abas laterais voltam ao topo para preservar o espaço de
+                escrita.
+              </p>
             </>
           )}
           {section === 'editor' && (
@@ -343,7 +348,7 @@ export function Settings({
               <AppIcon />
               <h3>Entrelinhas</h3>
               <p>Um espaço tranquilo para escrever.</p>
-              <span className="version-pill">Versão 0.1.0</span>
+              <span className="version-pill">Versão {version}</span>
               <p className="muted">
                 Feito com Tauri, React e cuidado.
                 <br />

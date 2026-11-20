@@ -17,10 +17,11 @@ fi
 
 mkdir -p "$entrelinhas_install/bin" "$entrelinhas_data/applications"
 install -m 755 "$entrelinhas_binary" "$entrelinhas_install/bin/entrelinhas.new"
-python3 - "$entrelinhas_install" "$entrelinhas_data" <<'PY'
-import os, sys
+python3 - "$entrelinhas_install" "$entrelinhas_data" "$entrelinhas_root/package.json" <<'PY'
+import os, sys, json
 from pathlib import Path
-installation, data = map(Path, sys.argv[1:])
+installation, data = map(Path, sys.argv[1:3])
+version = json.loads(Path(sys.argv[3]).read_text())["version"]
 executable = installation / 'bin/entrelinhas'
 os.replace(executable.with_name('entrelinhas.new'), executable)
 quoted = str(executable).replace('\\', '\\\\').replace('"', '\\"').replace('`', '\\`').replace('$', '\\$')
@@ -37,7 +38,7 @@ StartupWMClass=entrelinhas
 StartupNotify=true
 '''
 (data / 'applications/entrelinhas.desktop').write_text(content)
-(installation / 'installed-by-entrelinhas').write_text('0.1.0\n')
+(installation / 'installed-by-entrelinhas').write_text(version + '\n')
 PY
 
 for entrelinhas_size in 32 64 128; do
