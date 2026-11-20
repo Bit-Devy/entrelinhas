@@ -21,6 +21,7 @@ import {
   Check,
 } from 'lucide-react'
 import { createNote, countText, moveItem, updateNote } from './core/notes'
+import { getWritingLayout } from './core/layout'
 import { defaultPreferences, readPreferences } from './core/preferences'
 import { shortcutAction } from './core/shortcuts'
 import type { Note, Preferences, RegisteredDocument, Project } from './core/types'
@@ -41,6 +42,19 @@ export default function App() {
   const [preferences, setPreferences] = useState<Preferences>(() =>
     structuredClone(defaultPreferences),
   )
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth)
+  useEffect(() => {
+    let frame = 0
+    const resize = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => setWindowWidth(window.innerWidth))
+    }
+    window.addEventListener('resize', resize)
+    return () => {
+      window.removeEventListener('resize', resize)
+      cancelAnimationFrame(frame)
+    }
+  }, [])
   const [notes, setNotes] = useState<Note[]>(() => [createNote()])
   const [documents, setDocuments] = useState<RegisteredDocument[]>([])
   const [projects, setProjects] = useState<Project[]>([])
@@ -403,8 +417,11 @@ export default function App() {
     }
   }, [immersive, preferences.sidebarSide])
 
+  const layout = getWritingLayout(windowWidth, preferences)
   const style = {
-    '--sidebar-width': `${preferences.sidebarVisible ? preferences.sidebarWidth : 0}px`,
+    '--sidebar-width': `${layout.sidebarWidth}px`,
+    '--writing-width': `${layout.writingWidth}px`,
+    '--writing-offset': `${layout.writingOffset}px`,
     '--editor-width': `${preferences.editorWidth}px`,
     '--editor-font-size': `${(preferences.fontSize * preferences.zoom) / 100}px`,
     '--editor-line-height': preferences.lineHeight,
@@ -417,7 +434,7 @@ export default function App() {
   } as CSSProperties
   return (
     <div
-      className={`app ${immersive ? 'immersive' : ''} sidebar-${preferences.sidebarSide} tabs-${preferences.tabsPosition} ${preferences.sidebarVisible ? '' : 'sidebar-hidden'}`}
+      className={`app ${immersive ? 'immersive' : ''} sidebar-${preferences.sidebarSide} tabs-${layout.tabsPosition} ${preferences.sidebarVisible ? '' : 'sidebar-hidden'}`}
       style={style}
     >
       <header className="titlebar chrome" data-tauri-drag-region>

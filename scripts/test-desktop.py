@@ -61,7 +61,9 @@ class Desktop:
         self.session = result['sessionId']
         self.call('/timeouts', {'implicit': 3000})
         wait(lambda: self.js('return !!document.querySelector(".tiptap")?.editor'), 'editor inicial')
-        wait(lambda: self.ipc('load_library') is not None, 'SQLite')
+        library = wait(lambda: self.ipc('load_library'), 'SQLite')
+        stored_theme = library['preferences'].get('theme', 'light')
+        wait(lambda: self.js('return document.documentElement.dataset.theme') == stored_theme, 'aplicar preferências carregadas')
 
     def call(self, path, value=None, method=None):
         return self.request('/session/' + self.session + path, value, method)
@@ -182,6 +184,7 @@ def main():
             wait(lambda: app.js('return document.querySelector(".app").classList.contains("immersive")'), 'imersão automática')
             after = app.js('return document.querySelector(".tiptap").getBoundingClientRect().toJSON()')
             assert before['left'] == after['left'] and before['top'] == after['top']
+            assert abs(after['left'] + after['width'] / 2 - app.js('return innerWidth / 2')) < 1, 'A coluna deve ficar no centro da janela inteira.'
             wait(lambda: app.js('return getComputedStyle(document.querySelector(".titlebar")).visibility==="hidden"'), 'ocultar controles')
             assert app.js('return !!document.querySelector(".block-caret")')
             app.screenshot(output / 'imersivo.png')

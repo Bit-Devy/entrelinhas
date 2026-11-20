@@ -1299,21 +1299,8 @@ p {
   }
 }
 @media (max-width: 900px) {
-  .app {
-    --sidebar-width: 204px !important;
-  }
-  .sidebar-hidden {
-    --sidebar-width: 0px !important;
-  }
   .nav-button kbd {
     display: none;
-  }
-  .editor-scroll {
-    padding-left: 32px;
-    padding-right: 25px;
-  }
-  .document-caption {
-    width: calc(100% - 64px);
   }
   .tabs-left .tabs,
   .tabs-right .tabs {
@@ -1662,4 +1649,23 @@ body,
 .app {
   border-radius: 12px;
   overflow: hidden;
+}
+
+/* A coluna permanece no centro da janela, com ou sem os controles. */
+.editor-scroll {
+  padding-inline: 0;
+}
+.writing-paper {
+  width: var(--writing-width);
+  max-width: none;
+  margin-inline: var(--writing-offset) 0;
+}
+.document-caption {
+  width: var(--writing-width);
+  margin-inline: var(--writing-offset) 0;
+}
+.nav-button > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
