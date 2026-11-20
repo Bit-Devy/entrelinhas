@@ -23,6 +23,7 @@ import type { Preferences, Project, RegisteredDocument } from '../core/types'
 import { backend, errorMessage } from '../native/api'
 import { moveItem } from '../core/notes'
 import type { AskDialog } from './useDialog'
+import { ProjectAssignment } from './ProjectAssignment'
 import { IconButton, Modal } from './ui'
 
 interface Props {
@@ -156,28 +157,17 @@ export function Sidebar(p: Props) {
       </IconButton>
       {documentMenu === document.path && (
         <div className="tree-menu">
-          <label>
-            Projeto
-            <select
-              aria-label={`Projeto de ${document.title}`}
-              value={document.projectId ?? ''}
-              onChange={(event) => {
-                const projectId = event.target.value || null
-                void run(async () => {
-                  await backend.associate(document.path, projectId)
-                  p.onAssociate(document.path, projectId)
-                })
-                setDocumentMenu(null)
-              }}
-            >
-              <option value="">Sem projeto</option>
-              {p.projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ProjectAssignment
+            label={`Projeto de ${document.title}`}
+            projects={p.projects}
+            value={document.projectId}
+            onChange={async (projectId) => {
+              await backend.associate(document.path, projectId)
+              p.onAssociate(document.path, projectId)
+              await p.refresh()
+              setDocumentMenu(null)
+            }}
+          />
           <button onClick={() => void relocate(document)}>
             <MapPin size={13} />
             Localizar novamente

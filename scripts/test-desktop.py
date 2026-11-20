@@ -204,7 +204,9 @@ def main():
             app.click('.modal button[type="submit"]')
             wait(lambda: len(app.ipc('load_library')['projects']) == 1, 'criar projeto')
             project_id = app.ipc('load_library')['projects'][0]['id']
-            app.js('const select=document.querySelector(".project-assignment");select.value=arguments[0];select.dispatchEvent(new Event("change",{bubbles:true}));', project_id)
+            app.click('[aria-label="Projeto do documento atual"]')
+            app.click(f'[role="option"][data-project-id="{project_id}"]')
+            wait(lambda: app.js('return document.querySelector(".project-assignment").innerText.includes("Caderno de ideias")'), 'selecionar projeto no painel do aplicativo')
             rich = '<h1>O que cabe entre as linhas</h1><p>Algumas ideias só precisam de um pouco de espaço para encontrar sua própria forma.</p><p>Escrever é também prestar atenção: ao que passou, ao que permanece e ao que ainda pode nascer.</p><blockquote><p>Deixe uma página aberta para o inesperado.</p></blockquote><h2>Um começo simples</h2><ul data-type="taskList"><li data-type="taskItem" data-checked="true"><div><p>Encontrar um lugar tranquilo</p></div></li><li data-type="taskItem" data-checked="false"><div><p>Dar tempo às ideias</p></div></li></ul>'
             app.editor('editor.commands.setContent(arguments[0]); return true', rich)
             app.key('s', ctrl=True)

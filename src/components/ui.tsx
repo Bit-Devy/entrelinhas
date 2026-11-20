@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { X } from 'lucide-react'
+import { createPortal } from 'react-dom'
 
 export function IconButton({
   label,
@@ -30,12 +31,11 @@ export function Modal({
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     const node = ref.current!
-    ;(
-      node.querySelector('[autofocus]') ??
-      node.querySelector('input, select, textarea') ??
-      node.querySelector('button')
-    )?.scrollIntoView({ block: 'nearest' })
-    ;(node.querySelector('input, select, textarea') as HTMLElement | null)?.focus()
+    const first =
+      node.querySelector<HTMLElement>('[autofocus]') ??
+      node.querySelector<HTMLElement>('input, select, textarea') ??
+      node.querySelector<HTMLElement>('button')
+    first?.focus({ preventScroll: true })
     const handle = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
@@ -64,7 +64,7 @@ export function Modal({
       previous?.focus()
     }
   }, [])
-  return (
+  return createPortal(
     <div
       className="modal-backdrop"
       onMouseDown={(event) => {
@@ -86,6 +86,7 @@ export function Modal({
         </header>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

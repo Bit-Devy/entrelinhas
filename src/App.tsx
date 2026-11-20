@@ -30,6 +30,7 @@ import { useDocuments } from './documents/useDocuments'
 import { useDialog } from './components/useDialog'
 import { open as openNative } from '@tauri-apps/plugin-dialog'
 import { EditorPane } from './editor/EditorPane'
+import { ProjectAssignment } from './components/ProjectAssignment'
 import { Formatting } from './components/Formatting'
 import { WindowResize } from './native/WindowResize'
 import { Sidebar } from './components/Sidebar'
@@ -660,30 +661,18 @@ export default function App() {
               )}
             </div>
             <div className="document-actions">
-              <select
-                className="project-assignment"
-                aria-label="Projeto do documento atual"
-                value={activeNote.projectId ?? ''}
-                onChange={(event) => {
-                  const projectId = event.target.value || null
-                  if (activeNote.path)
-                    void backend
-                      .associate(activeNote.path, projectId)
-                      .then(async () => {
-                        setNotes((current) => updateNote(current, activeId, { projectId }))
-                        await refresh()
-                      })
-                      .catch((error) => notify(errorMessage(error)))
-                  else setNotes((current) => updateNote(current, activeId, { projectId }))
+              <ProjectAssignment
+                projects={projects}
+                value={activeNote.projectId}
+                onChange={async (projectId) => {
+                  if (activeNote.path) await backend.associate(activeNote.path, projectId)
+                  setNotes((current) => updateNote(current, activeId, { projectId }))
+                  if (activeNote.path) await refresh()
                 }}
-              >
-                <option value="">Sem projeto</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
+                onDone={() => {
+                  activeEditor?.commands.focus()
+                }}
+              />
               <IconButton label="Salvar documento" onClick={() => void fileOps.saveNote(activeId)}>
                 <Save size={16} />
               </IconButton>
