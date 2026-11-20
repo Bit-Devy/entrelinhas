@@ -239,7 +239,8 @@ p {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--muted);
-  pointer-events: none;
+  display: block;
+  padding: 5px 9px;
 }
 .window-title span {
   color: var(--faint);

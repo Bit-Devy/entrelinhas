@@ -10,7 +10,7 @@ import { editorExtensions } from '../editor/extensions'
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: vi.fn(), save: vi.fn() }))
 vi.mock('../native/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../native/api')>()),
-  backend: { save: vi.fn(), read: vi.fn() },
+  backend: { save: vi.fn(), read: vi.fn(), rename: vi.fn() },
 }))
 
 function setup(format: 'md' | 'txt' = 'md') {
@@ -40,6 +40,46 @@ function setup(format: 'md' | 'txt' = 'md') {
 }
 
 beforeEach(() => vi.clearAllMocks())
+
+it('renomear um rascunho só muda a memória e o nome sugerido ao salvar', async () => {
+  const { note, editor, options, hook } = setup()
+  await act(async () => {
+    await hook.result.current.renameNote(note.id, 'Ideias novas')
+  })
+  const renamed = options.setNotes.mock.calls[0][0]([note])[0]
+  expect(renamed).toMatchObject({ title: 'Ideias novas', dirty: true, path: null })
+  expect(backend.rename).not.toHaveBeenCalled()
+  expect(backend.save).not.toHaveBeenCalled()
+  options.notes = [renamed]
+  hook.rerender()
+  await act(async () => {
+    await hook.result.current.saveNote(note.id)
+  })
+  expect(save).toHaveBeenCalledWith(expect.objectContaining({ defaultPath: 'Ideias novas.md' }))
+  hook.unmount()
+  editor.destroy()
+})
+
+it('renomeia o arquivo sem salvar o editor nem mudar a versão ou o estado de alterações', async () => {
+  const { note, editor, options, hook } = setup()
+  note.path = '/tmp/Original.md'
+  note.dirty = true
+  note.version = 'conteúdo-original'
+  vi.mocked(backend.rename).mockResolvedValue({ path: '/tmp/Novo.md', title: 'Novo.md' })
+  await act(async () => {
+    await hook.result.current.renameNote(note.id, 'Novo')
+  })
+  expect(options.setNotes.mock.calls[0][0]([note])[0]).toMatchObject({
+    path: '/tmp/Novo.md',
+    title: 'Novo.md',
+    dirty: true,
+    version: 'conteúdo-original',
+  })
+  expect(backend.save).not.toHaveBeenCalled()
+  expect(options.refresh).toHaveBeenCalledOnce()
+  hook.unmount()
+  editor.destroy()
+})
 
 it.each([false, true])('abrir o primeiro arquivo preserva texto existente: %s', async (hasText) => {
   const { note, editor, options, hook } = setup()

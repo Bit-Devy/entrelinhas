@@ -1,6 +1,7 @@
 mod database;
 mod files;
 mod models;
+mod rename;
 
 use models::*;
 use std::path::PathBuf;
@@ -66,6 +67,22 @@ async fn save_document(
             ));
         }
         Ok(result)
+    })
+    .await
+}
+#[tauri::command]
+async fn rename_document(
+    state: tauri::State<'_, AppState>,
+    path: String,
+    title: String,
+) -> AppResult<RenameResult> {
+    let db = state.database.clone();
+    let lock = state.write_lock.clone();
+    blocking(move || {
+        let _guard = lock
+            .lock()
+            .map_err(|_| AppError::new("busy", "A gravação anterior ainda não terminou."))?;
+        rename::document(&db, &path, &title)
     })
     .await
 }
@@ -152,6 +169,7 @@ pub fn run() {
             save_preferences,
             read_document,
             save_document,
+            rename_document,
             read_image,
             import_image,
             upsert_project,

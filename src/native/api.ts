@@ -33,6 +33,8 @@ export const backend = {
   preferences: (preferences: Preferences) => native<void>('save_preferences', { preferences }),
   read: (path: string) => native<ReadResult>('read_document', { path }),
   save: (request: SaveRequest) => native<SaveResult>('save_document', { request }),
+  rename: (path: string, title: string) =>
+    native<{ path: string; title: string }>('rename_document', { path, title }),
   image: (document: string, source: string) => native<string>('read_image', { document, source }),
   importImage: (path: string) => native<string>('import_image', { path }),
   project: (project: Project) => native<void>('upsert_project', { project }),

@@ -2,6 +2,7 @@ import { useCallback, useRef, type Dispatch, type SetStateAction, type RefObject
 import type { Editor, JSONContent } from '@tiptap/core'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { createNote, hasFormatting, textFromDocument, updateNote } from '../core/notes'
+import { documentTitle, suggestedFilename } from '../core/titles'
 import type { Note, Preferences, RegisteredDocument } from '../core/types'
 import { backend, errorCode, errorMessage } from '../native/api'
 import { parseDocument, serializeHtml } from '../editor/serialization'
@@ -152,7 +153,7 @@ export function useDocuments(options: Options) {
         ]
         path = await save({
           title: 'Salvar como',
-          defaultPath: note.path ?? `Sem título.${note.format}`,
+          defaultPath: note.path ?? suggestedFilename(note),
           filters: note.format === 'txt' ? [...filters].reverse() : filters,
         })
         if (!path) return false
@@ -278,5 +279,26 @@ export function useDocuments(options: Options) {
     },
     [saveNote],
   )
-  return { openPath, openDocument, saveNote, mayDiscard, waitForSaves }
+  const renameNote = useCallback(
+    async (id: string, value: string): Promise<void> => {
+      const title = documentTitle(value)
+      if (saving.current.size) {
+        await waitForSaves()
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+      }
+      const { notes, setNotes, refresh } = current.current
+      const note = notes.find((note) => note.id === id)
+      if (!note) return
+      if (!note.path) {
+        setNotes((existing) => updateNote(existing, id, { title, dirty: true }))
+        return
+      }
+      const renamed = await backend.rename(note.path, title)
+      // Renomear não grava o editor nem altera a versão usada para detectar conflitos.
+      setNotes((existing) => updateNote(existing, id, renamed))
+      await refresh()
+    },
+    [waitForSaves],
+  )
+  return { openPath, openDocument, saveNote, mayDiscard, waitForSaves, renameNote }
 }

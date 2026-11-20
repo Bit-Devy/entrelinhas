@@ -62,6 +62,11 @@ pub struct ReadResult {
     pub version: String,
     pub format: String,
 }
+#[derive(Debug, Serialize)]
+pub struct RenameResult {
+    pub path: String,
+    pub title: String,
+}
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImageAsset {

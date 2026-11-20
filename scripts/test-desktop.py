@@ -123,6 +123,14 @@ class Desktop:
         element = self.element(css)
         self.call('/actions', {'actions': [{'type': 'pointer', 'id': 'mouse', 'parameters': {'pointerType': 'mouse'}, 'actions': [{'type': 'pointerMove', 'duration': 50, 'origin': 'viewport', 'x': 10, 'y': 10}, {'type': 'pointerMove', 'duration': 100, 'origin': {'element-6066-11e4-a52e-4f735466cecf': element}, 'x': 0, 'y': 0}]}]})
 
+    def double_click(self, css, x=0):
+        element = self.element(css)
+        self.call('/actions', {'actions': [{'type': 'pointer', 'id': 'mouse', 'parameters': {'pointerType': 'mouse'}, 'actions': [{'type': 'pause', 'duration': 400}, {'type': 'pointerMove', 'origin': {'element-6066-11e4-a52e-4f735466cecf': element}, 'x': x, 'y': 0}, {'type': 'pointerDown', 'button': 0}, {'type': 'pointerUp', 'button': 0}, {'type': 'pause', 'duration': 70}, {'type': 'pointerDown', 'button': 0}, {'type': 'pointerUp', 'button': 0}]}]})
+
+    def fill(self, css, text):
+        self.call('/element/' + self.element(css) + '/clear', {})
+        self.keys(css, text)
+
     def stop(self):
         if self.session:
             try:
@@ -241,6 +249,20 @@ def main():
             app.call('/window/rect', {'width': 1180, 'height': 780})
             wait(lambda: app.js('return [innerWidth,innerHeight]') == [1180, 780], 'restaurar janela para o restante dos testes')
             original_rect = app.call('/window/rect')
+            app.double_click('.brand span')
+            wait(lambda: app.ipc('plugin:window|is_maximized', label='main'), 'duplo clique no nome do aplicativo maximiza')
+            app.double_click('.titlebar', x=app.js('return Math.round(innerWidth/4)'))
+            wait(lambda: not app.ipc('plugin:window|is_maximized', label='main'), 'duplo clique na área livre restaura')
+            assert not app.ipc('plugin:window|is_minimized', label='main')
+            passed('duplo clique na barra maximiza e restaura sem minimizar')
+            app.double_click('.window-title')
+            wait(lambda: app.js('return !!document.querySelector(arguments[0])', '[role=dialog][aria-label="Editar título"]'), 'editar título com duplo clique')
+            assert not app.ipc('plugin:window|is_maximized', label='main')
+            app.fill('[aria-label="Título do documento"]', 'Nome escolhido')
+            app.screenshot(output / 'rename-title.png')
+            app.click('[role=dialog] button[type=submit]')
+            wait(lambda: app.js('return document.querySelector(".window-title").textContent.includes("Nome escolhido")'), 'aplicar título ao rascunho')
+            passed('duplo clique no título edita o nome do rascunho')
             for width in (720, 1500):
                 app.call('/window/rect', {'width': width, 'height': 780})
                 wait(lambda: app.js('return innerWidth') == width, 'redimensionar janela')
@@ -303,6 +325,30 @@ def main():
             assert library['documents'][0]['path'] == str(note_path)
             assert '# O que cabe entre as linhas' in note_path.read_text()
             passed('Ctrl+S e seletor GNOME gravam Markdown em Downloads e associam projeto')
+            saved_bytes = note_path.read_bytes()
+            app.editor('editor.commands.insertContent("ALTERAÇÃO_NÃO_SALVA");return true')
+            blocked_path = downloads / 'Ocupado.md'
+            blocked_path.write_text('preservado', encoding='utf-8')
+            app.double_click('.window-title')
+            app.fill('[aria-label="Título do documento"]', 'Ocupado')
+            app.click('[role=dialog] button[type=submit]')
+            wait(lambda: app.js('return !!document.querySelector("[role=alert]")'), 'recusar título já existente')
+            assert note_path.read_bytes() == saved_bytes and blocked_path.read_text() == 'preservado'
+            app.fill('[aria-label="Título do documento"]', 'Título temporário')
+            app.click('[role=dialog] button[type=submit]')
+            renamed_path = downloads / 'Título temporário.md'
+            wait(renamed_path.exists, 'renomear arquivo salvo')
+            wait(lambda: app.js('return !document.querySelector("[role=dialog]")'), 'concluir renomeação')
+            assert not note_path.exists() and renamed_path.read_bytes() == saved_bytes
+            assert app.editor('return editor.getText().includes("ALTERAÇÃO_NÃO_SALVA")')
+            document = app.ipc('load_library')['documents'][0]
+            assert document['path'] == str(renamed_path) and document['projectId'] == project_id
+            app.double_click('.window-title')
+            app.fill('[aria-label="Título do documento"]', 'Entre as linhas')
+            app.click('[role=dialog] button[type=submit]')
+            wait(note_path.exists, 'voltar ao nome original')
+            wait(lambda: app.js('return !document.querySelector("[role=dialog]")'), 'fechar edição do título')
+            passed('renomear preserva conteúdo, alterações e projeto, sem substituir outro arquivo')
             app.keys('.editor-scroll:not(.inactive) .tiptap', ' ALTERAÇÃO_NÃO_SALVA')
             wait(lambda: app.js('return !document.querySelector(".toast") || getComputedStyle(document.querySelector(".toast")).visibility==="hidden"'), 'ocultar avisos durante a digitação')
             assert 'ALTERAÇÃO_NÃO_SALVA' not in note_path.read_text()

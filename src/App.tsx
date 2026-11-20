@@ -7,8 +7,6 @@ import {
   Save,
   Plus,
   X,
-  Minus,
-  Square,
   PanelLeftOpen,
   Settings2,
   Search,
@@ -39,6 +37,8 @@ import { FindBar } from './components/FindBar'
 import { WelcomeTheme } from './components/WelcomeTheme'
 import { Settings } from './components/Settings'
 import { TooltipLayer } from './components/TooltipLayer'
+import { Titlebar } from './components/Titlebar'
+import { RenameDocument } from './components/RenameDocument'
 import { IconButton, Modal } from './components/ui'
 
 export default function App() {
@@ -68,6 +68,7 @@ export default function App() {
   const [immersive, setImmersive] = useState(false),
     [settings, setSettings] = useState(false)
   const [librarySearch, setLibrarySearch] = useState(false)
+  const [renameId, setRenameId] = useState<string | null>(null)
   const [toolbar, setToolbar] = useState(false),
     [menu, setMenu] = useState(false)
   const [find, setFind] = useState<'find' | 'replace' | null>(null)
@@ -467,35 +468,14 @@ export default function App() {
       className={`app ${immersive ? 'immersive' : ''} sidebar-${preferences.sidebarSide} tabs-${layout.tabsPosition} ${preferences.sidebarVisible ? '' : 'sidebar-hidden'}`}
       style={style}
     >
-      <header className="titlebar chrome" data-tauri-drag-region>
-        <div className="brand" data-tauri-drag-region>
-          <span data-tauri-drag-region>Entrelinhas</span>
-        </div>
-        <div className="window-title" data-tauri-drag-region>
-          {activeNote.title}
-          <span> · {activeNote.format.toUpperCase()}</span>
-        </div>
-        <div className="window-controls">
-          <IconButton
-            label="Minimizar"
-            onClick={() => isTauri() && void getCurrentWindow().minimize()}
-          >
-            <Minus size={14} />
-          </IconButton>
-          <IconButton
-            label="Maximizar ou restaurar"
-            onClick={() => isTauri() && void getCurrentWindow().toggleMaximize()}
-          >
-            <Square size={11} />
-          </IconButton>
-          <IconButton
-            label="Fechar aplicativo"
-            onClick={() => isTauri() && void getCurrentWindow().close()}
-          >
-            <X size={16} />
-          </IconButton>
-        </div>
-      </header>
+      <Titlebar
+        note={activeNote}
+        onError={notify}
+        onRename={() => {
+          setRenameId(activeId)
+          setImmersive(false)
+        }}
+      />
       <Sidebar
         preferences={preferences}
         projects={projects}
@@ -873,6 +853,13 @@ export default function App() {
             </div>
           </form>
         </Modal>
+      )}
+      {renameId && notes.find((note) => note.id === renameId) && (
+        <RenameDocument
+          note={notes.find((note) => note.id === renameId)!}
+          onRename={(title) => fileOps.renameNote(renameId, title)}
+          onClose={() => setRenameId(null)}
+        />
       )}
       {dialog.element}
       <WindowResize onError={notify} />
