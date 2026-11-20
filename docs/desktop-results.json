@@ -1,5 +1,5 @@
 {
-  "passed": 20,
+  "passed": 23,
   "checks": [
     "primeira abertura pergunta o tema antes de persistir preferências",
     "tema inicial lembrado sem repetir a apresentação",
@@ -11,17 +11,23 @@
     "projetos persistem; alterações de documentos exigem salvamento manual",
     "abas, atalhos e abertura sem duplicação",
     "localizar e substituir",
+    "formatação inferior sem moldura e seletores preservam a seleção",
     "seletores de cor próprios preservam o formulário e a seleção do texto",
+    "menu de tabela executa adição e remoção de linhas e colunas",
     "imagens em memória até salvar e referências relativas reais",
     "três temas, três cursores, capturas reais e preferências entre execuções",
+    "dicas de botões acompanham os três temas e exibem os atalhos",
     "navegação à direita e abas laterais",
     "F11 alterna a tela cheia nativa",
     "conflitos externos preservam o arquivo ao cancelar",
     "busca global lê o conteúdo salvo no disco",
     "confirmação de descarte opcional respeita cancelar e descartar",
     "formato padrão TXT e salvamento textual real",
-    "composição preserva atalhos; documento longo (280000 caracteres) em 0.43s"
+    "composição preserva atalhos; documento longo (280000 caracteres) em 0.42s"
   ],
   "engine": "Tauri 2 / WebKitGTK",
-  "platform": "Ubuntu 26.10 / Wayland"
+  "platform": "Ubuntu 26.10 / Wayland",
+  "version": "0.3.0",
+  "binary": "src-tauri/target/release/entrelinhas",
+  "developmentServer": false
 }

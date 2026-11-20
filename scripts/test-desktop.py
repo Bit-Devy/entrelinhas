@@ -91,7 +91,11 @@ class Desktop:
 
     def choose(self, label, value):
         self.click(f'[role="combobox"][aria-label="{label}"]')
+        wait(lambda: self.js('return !!document.querySelector(".select-options")'), 'abrir menu ' + label)
+        assert self.js('const r=document.querySelector(".select-options").getBoundingClientRect();return r.left>=0 && r.top>=0 && r.right<=innerWidth && r.bottom<=innerHeight'), 'Menu fora dos limites da janela.'
         self.click(f'.select-options [role="option"][data-value="{value}"]')
+        wait(lambda: self.js('return !document.querySelector(".select-options")'), 'confirmar seleção ' + label)
+        self.paint()
 
     def keys(self, css, text):
         self.call('/element/' + self.element(css) + '/value', {'text': text})
@@ -106,8 +110,13 @@ class Desktop:
         self.key('Escape')
         wait(lambda: self.js('return getComputedStyle(document.querySelector(".titlebar")).opacity==="1"'), 'revelar interface')
 
-    def screenshot(self, path):
+    def paint(self):
+        # TipTap restaura o foco em requestAnimationFrame; aguarda também a
+        # pintura antes de iniciar a próxima interação ou capturar a janela.
         self.call('/execute/async', {'script': 'const done=arguments[arguments.length-1];requestAnimationFrame(()=>requestAnimationFrame(()=>done(true)));', 'args': []})
+
+    def screenshot(self, path):
+        self.paint()
         path.write_bytes(base64.b64decode(self.call('/screenshot')))
 
     def hover(self, css):
@@ -207,6 +216,7 @@ def main():
             assert app.js('return document.title') == 'Entrelinhas'
             assert app.js('return document.querySelector(".brand").children.length') == 1
             assert app.js('return document.querySelectorAll("[role=tab]").length') == 0
+            app.screenshot(output / 'blank.png')
             passed('inicialização em nota vazia')
             original_rect = app.call('/window/rect')
             for width in (720, 1500):
@@ -256,6 +266,7 @@ def main():
             project_id = app.ipc('load_library')['projects'][0]['id']
             assert app.ipc('load_library')['projects'][0]['color'] == '#b37a59'
             app.click('[aria-label="Projeto do documento atual"]')
+            app.screenshot(output / 'project-picker.png')
             app.click(f'[role="option"][data-project-id="{project_id}"]')
             wait(lambda: app.js('return document.querySelector(".project-assignment").innerText.includes("Caderno de ideias")'), 'selecionar projeto no painel do aplicativo')
             rich = '<h1>O que cabe entre as linhas</h1><p>Algumas ideias só precisam de um pouco de espaço para encontrar sua própria forma.</p><p>Escrever é também prestar atenção: ao que passou, ao que permanece e ao que ainda pode nascer.</p><blockquote><p>Deixe uma página aberta para o inesperado.</p></blockquote><h2>Um começo simples</h2><ul data-type="taskList"><li data-type="taskItem" data-checked="true"><div><p>Encontrar um lugar tranquilo</p></div></li><li data-type="taskItem" data-checked="false"><div><p>Dar tempo às ideias</p></div></li></ul>'
@@ -335,7 +346,20 @@ def main():
             app.hover('[aria-label="Negrito (Ctrl+B)"]')
             wait(lambda: app.js('return document.querySelector("[role=tooltip]")?.innerText.includes("Negrito")'), 'dica acima da formatação')
             assert app.js('return document.querySelector("[role=tooltip]").getBoundingClientRect().bottom <= document.querySelector(".formatting").getBoundingClientRect().top')
+            wait(lambda: app.js('return getComputedStyle(document.querySelector("[role=tooltip]")).opacity') == '1', 'terminar animação da dica inferior')
             app.screenshot(output / 'tooltip-formatting.png')
+            app.call('/window/rect', {'width': 720, 'height': 780})
+            wait(lambda: app.js('return innerWidth') == 720, 'testar formatação em janela estreita')
+            app.call('/execute/async', {'script': 'const done=arguments[arguments.length-1];requestAnimationFrame(()=>requestAnimationFrame(()=>done(true)));', 'args': []})
+            assert app.js('const r=document.querySelector(".formatting").getBoundingClientRect();return r.left>=0 && r.right<=innerWidth && r.bottom<=innerHeight-30')
+            before_tools = app.js('return document.querySelector(".editor-scroll:not(.inactive) .tiptap").getBoundingClientRect().toJSON()')
+            app.key('f', ctrl=True, shift=True)
+            wait(lambda: app.js('return document.querySelector(".app").classList.contains("immersive")'), 'ocultar ferramentas inferiores')
+            after_tools = app.js('return document.querySelector(".editor-scroll:not(.inactive) .tiptap").getBoundingClientRect().toJSON()')
+            assert before_tools['left'] == after_tools['left'] and before_tools['top'] == after_tools['top'] and before_tools['width'] == after_tools['width']
+            app.reveal()
+            app.call('/window/rect', original_rect)
+            wait(lambda: app.js('return innerWidth') == original_rect['width'], 'restaurar janela após testar ferramentas')
             passed('formatação inferior sem moldura e seletores preservam a seleção')
             app.click('[aria-label="Cor do texto"]')
             app.click('[aria-label="Usar cor #6f94b5"]')

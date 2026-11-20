@@ -12,11 +12,12 @@ Entrelinhas é um editor **desktop de verdade**, feito com Tauri 2, React e Type
 - **Nenhum salvamento automático, recuperação de rascunhos ou restauração de abas.**
 - Salvamento manual em arquivos Markdown e TXT comuns, em qualquer pasta.
 - Projetos lógicos com nome, cor, ícone opcional e referências a documentos externos.
-- Abas reordenáveis; conteúdo, seleção e histórico de edição mantidos ao alternar entre elas.
+- Guias ocultas com uma única nota; botão **Nova guia** e **Ctrl+T** revelam a faixa ao abrir a segunda. Guias reordenáveis, com conteúdo, seleção e histórico preservados ao alternar.
 - Interface imersiva automática, alternância manual, acesso por Esc e aproximação das bordas.
 - Três temas: Claro, Escuro e Sépia Noturno, com escolha na primeira abertura e respeito às preferências de instalações anteriores.
 - Coluna de escrita centralizada na janela inteira, com limite de largura e posição estável ao esconder os controles.
-- Seletores de projeto e de cor próprios, com o tema do aplicativo e fundo desfocado.
+- Seletores próprios para projeto, cor, fonte, formato, layout e formatação, acompanhando os três temas. Painéis preservam o fundo desfocado.
+- Formatação na parte inferior, com botões sem moldura, e dicas temáticas com nomes e atalhos ao passar o mouse ou navegar pelo teclado.
 - Cursor em bloco, fino ou invisível; fonte, tamanho, largura, zoom e entrelinha configuráveis.
 - Navegação à esquerda ou à direita, redimensionável; abas superiores ou laterais. Em janelas estreitas, as abas voltam ao topo para manter uma coluna confortável.
 - Busca e substituição no documento; busca por nome e conteúdo nos arquivos salvos registrados.
@@ -34,7 +35,7 @@ As gravações usam arquivo temporário na pasta de destino, sincronização e r
 
 ## Editor e formatos
 
-O editor usa TipTap/ProseMirror, com desfazer/refazer, composição de texto, Unicode e quebra automática de linhas. A barra de ferramentas fica disponível pelo botão de ajustes no documento ou pela seleção de texto.
+O editor usa TipTap/ProseMirror, com desfazer/refazer, composição de texto, Unicode e quebra automática de linhas. Os botões de formatação ficam na parte inferior, sem uma moldura ao redor. O botão de ajustes no documento revela as ferramentas completas; selecionar texto revela os controles essenciais no mesmo lugar.
 
 Suporta negrito, itálico, sublinhado, tachado, títulos, listas, checklists interativas, citações, código, links, separadores, alinhamento, destaque, cores, tamanho de texto, imagens e tabelas com edição de linhas e colunas.
 
@@ -60,9 +61,9 @@ As capturas abaixo são da janela Tauri real, executada no Ubuntu 26.10 com Wayl
 | ------------------------------------ | ------------------------------------ | -------------------------------------------- |
 | ![Claro](docs/screenshots/light.png) | ![Escuro](docs/screenshots/dark.png) | ![Sépia Noturno](docs/screenshots/sepia.png) |
 
-[Ver o modo imersivo](docs/screenshots/imersivo.png) · [Escolha inicial de tema](docs/screenshots/welcome.png) · [Seletor de cores no Sépia Noturno](docs/screenshots/color-sepia.png) · [Seleção de projeto](docs/screenshots/project-picker.png).
+[Ver o modo imersivo](docs/screenshots/imersivo.png) · [Escolha inicial de tema](docs/screenshots/welcome.png) · [Seletor de cores no Sépia Noturno](docs/screenshots/color-sepia.png) · [Seleção de projeto](docs/screenshots/project-picker.png) · [Menus temáticos](docs/screenshots/select-sepia.png) · [Formatação inferior](docs/screenshots/formatting-bottom.png) · [Dicas de botões](docs/screenshots/tooltip-sepia.png).
 
-Os seletores nativos acompanham o modo claro ou escuro do aplicativo; Sépia Noturno usa a variante escura do GTK.
+Os menus de seleção e as dicas usam as cores do tema do aplicativo. Os seletores de opções permitem navegar com setas, Home/End, digitar o início do nome e confirmar com Enter; Esc cancela a seleção sem fechar as configurações. Os diálogos do sistema para abrir e salvar arquivos acompanham o modo claro ou escuro; Sépia Noturno usa a variante escura do GTK.
 
 O cursor em bloco usa as coordenadas reais da seleção do ProseMirror e a largura do próximo grafema. Durante composição IME, a camada visual cede ao cursor nativo. Preferências de movimento reduzido são respeitadas.
 
@@ -72,12 +73,12 @@ O projeto foi compilado e verificado no **Ubuntu 26.10, x86_64, GNOME/Wayland**.
 
 ### Pacote Debian
 
-[Baixe o instalador e os checksums da versão 0.2.0](https://github.com/Bit-Devy/entrelinhas/releases/tag/v0.2.0).
+[Baixe o instalador e os checksums da versão 0.3.0](https://github.com/Bit-Devy/entrelinhas/releases/tag/v0.3.0).
 
 Para instalar um pacote compilado localmente:
 
 ```bash
-sudo apt install ./src-tauri/target/release/bundle/deb/Entrelinhas_0.2.0_amd64.deb
+sudo apt install ./src-tauri/target/release/bundle/deb/Entrelinhas_0.3.0_amd64.deb
 ```
 
 O aplicativo aparece no menu como **Entrelinhas**, com ícone próprio. O pacote depende do WebKitGTK 4.1 e GTK 3 do sistema. Uma compilação feita no Ubuntu 26.10 não garante compatibilidade binária com versões anteriores do Ubuntu; para elas, compile no sistema de destino.
@@ -156,9 +157,9 @@ python3 scripts/test-desktop.py --binary src-tauri/target/release/entrelinhas
 
 ### Verificações realizadas
 
-- **46 testes TypeScript:** notas, abas, descarte, preferências, atalhos, Markdown, formatação, TXT, Unicode, busca, imagens, gravação explícita, conflitos, espera de gravações, centralização com diferentes painéis, seletores próprios e primeira escolha de tema.
+- **58 testes TypeScript:** notas, abas, descarte, preferências, atalhos, Markdown, formatação, TXT, Unicode, busca, imagens, gravação explícita, conflitos, espera de gravações, centralização com diferentes painéis, seletores próprios por mouse e teclado, dicas, guias sob demanda, abertura sem perder texto e primeira escolha de tema.
 - **6 testes Rust:** gravação atômica, conflitos, UTF-8, nomes internacionais, imagens relativas, arquivos somente leitura, recursos inválidos, projetos em Downloads, exclusão sem apagar documentos, localização e busca.
-- **20 verificações desktop:** inicialização, ocultação sem deslocamento, Esc, descarte após reiniciar, Ctrl+S com seletor GNOME, associação externa, abas, busca/substituição, colagem de imagens, temas, cursores, persistência, layout, F11, conflitos, busca global, confirmação opcional, TXT, paleta de cores nos três temas, primeira abertura e centralização ao redimensionar.
+- **23 verificações desktop:** inicialização, ocultação sem deslocamento, Esc, descarte após reiniciar, Ctrl+S com seletor GNOME, associação externa, abas, busca/substituição, colagem de imagens, temas, cursores, persistência, layout, F11, conflitos, busca global, confirmação opcional, TXT, paleta de cores nos três temas, primeira abertura, centralização ao redimensionar, formatação inferior sem moldura, menus de tabela e dicas nos três temas.
 - O roteiro desktop também passou no **executável otimizado de produção, com o Vite desligado**.
 - Documento de **280 mil caracteres** carregado e editado no roteiro desktop. O tempo medido inclui definir o conteúdo e inserir texto; não representa um benchmark de latência por tecla.
 
@@ -175,6 +176,7 @@ Os testes verificam Unicode e o tratamento de eventos de composição. **Uma ses
 | Ação                                | Atalho padrão                   |
 | ----------------------------------- | ------------------------------- |
 | Nova nota                           | Ctrl+N                          |
+| Nova guia                           | Ctrl+T                          |
 | Abrir documento                     | Ctrl+O                          |
 | Salvar                              | Ctrl+S                          |
 | Salvar como                         | Ctrl+Shift+S                    |
@@ -188,6 +190,8 @@ Os testes verificam Unicode e o tratamento de eventos de composição. **Uma ses
 | Menu do documento                   | Alt+F; setas para navegar       |
 | Tela cheia                          | F11                             |
 | Aumentar / reduzir / restaurar zoom | Ctrl+Plus / Ctrl+Minus / Ctrl+0 |
+
+Abrir o primeiro arquivo reutiliza a nota vazia inicial. Texto ou projeto já escolhidos nessa nota são preservados em uma guia separada. Ao voltar a uma única nota, a faixa de guias se recolhe.
 
 Os atalhos principais podem ser personalizados em **Configurações → Atalhos**, com verificação de combinações já utilizadas.
 
