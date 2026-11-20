@@ -18,7 +18,7 @@ export function useDocuments(options: Options) {
   const saving = useRef(new Set<string>())
   const opening = useRef(new Set<string>())
 
-  const openPath = useCallback(async (path: string) => {
+  const openPath = useCallback(async function openPath(path: string): Promise<boolean> {
     const { notes, setNotes, setActiveId, documents, notify, refresh } = current.current
     const duplicate = notes.find(note => note.path === path)
     if (duplicate) { setActiveId(duplicate.id); return true }
@@ -42,7 +42,18 @@ export function useDocuments(options: Options) {
       if (unavailable) notify(`${unavailable} imagem(ns) indisponível(is). As referências foram mantidas. Imagens remotas não são baixadas automaticamente.`)
       await refresh()
       return true
-    } catch (error) { notify(`Não foi possível abrir o documento: ${errorMessage(error)}`); return false }
+    } catch (error) {
+      if (errorCode(error) === 'missing') {
+        const choice = await current.current.ask({ title: 'Arquivo não encontrado', message: 'O arquivo pode ter sido movido ou apagado. Escolha seu novo local para atualizar a referência; nenhum arquivo será movido.', choices: [{ id: 'cancel', label: 'Cancelar' }, { id: 'locate', label: 'Localizar novamente', primary: true }] })
+        if (choice === 'locate') {
+          try {
+            const selected = await open({ title: 'Localizar documento', filters: [{ name: 'Documentos', extensions: ['md', 'markdown', 'txt'] }] })
+            if (typeof selected === 'string') { await backend.relocate(path, selected); await refresh(); return await openPath(selected) }
+          } catch (locateError) { notify(errorMessage(locateError)) }
+        }
+      } else notify(`Não foi possível abrir o documento: ${errorMessage(error)}`)
+      return false
+    }
     finally { opening.current.delete(path) }
   }, [])
 

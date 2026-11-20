@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type CSSProperties } from 're
 import type { Editor } from '@tiptap/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { isTauri } from '@tauri-apps/api/core'
-import { FolderOpen, Save, Plus, X, Minus, Square, PanelLeftClose, PanelLeftOpen, Settings2, Search, FileText, ChevronDown, Maximize2, SlidersHorizontal, BookOpen, Keyboard, Focus, Check } from 'lucide-react'
+import { FolderOpen, Save, Plus, X, Minus, Square, PanelLeftOpen, Settings2, Search, FileText, ChevronDown, Maximize2, SlidersHorizontal, Keyboard, Focus, Check } from 'lucide-react'
 import { createNote, countText, moveItem, updateNote } from './core/notes'
 import { defaultPreferences, readPreferences } from './core/preferences'
 import { shortcutAction } from './core/shortcuts'
@@ -13,6 +13,8 @@ import { useDialog } from './components/useDialog'
 import { open as openNative } from '@tauri-apps/plugin-dialog'
 import { EditorPane } from './editor/EditorPane'
 import { Formatting } from './components/Formatting'
+import { Sidebar } from './components/Sidebar'
+import { LibrarySearch } from './components/LibrarySearch'
 import { FindBar } from './components/FindBar'
 import { Settings } from './components/Settings'
 import { IconButton, Modal } from './components/ui'
@@ -27,6 +29,7 @@ export default function App() {
   const dialog = useDialog()
   const [activeId, setActiveId] = useState(() => notes[0].id)
   const [immersive, setImmersive] = useState(false), [settings, setSettings] = useState(false)
+  const [librarySearch, setLibrarySearch] = useState(false)
   const [toolbar, setToolbar] = useState(false), [menu, setMenu] = useState(false)
   const [find, setFind] = useState<'find' | 'replace' | null>(null)
   const [stats, setStats] = useState({ words: 0, characters: 0 })
@@ -46,8 +49,8 @@ export default function App() {
   }, [])
   void editorVersion
   const closeSettings = useCallback(() => setSettings(false), [])
-  const newNote = useCallback(() => {
-    const note = createNote(preferences.defaultFormat)
+  const newNote = useCallback((projectId: string | null = null) => {
+    const note = createNote(preferences.defaultFormat, projectId)
     setNotes(current => [...current, note]); setActiveId(note.id); setImmersive(false)
   }, [preferences.defaultFormat])
   const notify = useCallback((message: string) => setNotice(message), [])
@@ -124,7 +127,7 @@ export default function App() {
   }, [notify])
   const onStats = useCallback((text: string) => setStats(countText(text)), [])
   const onChange = useCallback((id: string) => setNotes(current => current.find(note => note.id === id)?.dirty ? current : updateNote(current, id, { dirty: true })), [])
-  const onTyping = useCallback(() => { if (preferences.autoImmersive && !settings && !find && !dialog.visible && link === null) { setImmersive(true); setMenu(false); setSelectionRect(null) } }, [preferences.autoImmersive, settings, find, link, dialog.visible])
+  const onTyping = useCallback(() => { if (preferences.autoImmersive && !settings && !find && !dialog.visible && !librarySearch && link === null) { setImmersive(true); setMenu(false); setSelectionRect(null) } }, [preferences.autoImmersive, settings, find, link, dialog.visible, librarySearch])
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme
     document.documentElement.style.colorScheme = preferences.theme === 'light' ? 'light' : 'dark'
@@ -134,7 +137,7 @@ export default function App() {
       if (event.isComposing) return
       if (event.key === 'Escape') { setImmersive(false); setMenu(false); setFind(null); setSelectionRect(null); return }
       if (event.key === 'F11') { event.preventDefault(); if (isTauri()) void getCurrentWindow().isFullscreen().then(full => getCurrentWindow().setFullscreen(!full)); return }
-      if (settings || dialog.visible || link !== null) return
+      if (settings || dialog.visible || librarySearch || link !== null || (event.target as HTMLElement).closest?.('[role=dialog]')) return
       if (event.altKey && event.key.toLowerCase() === 'f') { event.preventDefault(); setImmersive(false); setMenu(value => !value); return }
       if (event.ctrlKey && event.key === 'Tab') { event.preventDefault(); const index = notes.findIndex(note => note.id === activeId); setActiveId(notes[(index + (event.shiftKey ? -1 : 1) + notes.length) % notes.length].id); return }
       if (event.ctrlKey && ['+', '=', '-', '0'].includes(event.key)) { event.preventDefault(); setPreferences(current => ({ ...current, zoom: event.key === '0' ? 100 : Math.min(200, Math.max(50, current.zoom + (event.key === '-' ? -10 : 10))) })); return }
@@ -150,7 +153,7 @@ export default function App() {
     }
     window.addEventListener('keydown', handle)
     return () => window.removeEventListener('keydown', handle)
-  }, [preferences, notes, activeId, settings, dialog.visible, link, newNote, closeNote, fileOps.openDocument, fileOps.saveNote])
+  }, [preferences, notes, activeId, settings, dialog.visible, librarySearch, link, newNote, closeNote, fileOps.openDocument, fileOps.saveNote])
   useEffect(() => {
     if (!immersive) return
     const move = (event: MouseEvent) => {
@@ -162,7 +165,6 @@ export default function App() {
     return () => { window.removeEventListener('mousemove', move); if (edgeTimer.current) clearTimeout(edgeTimer.current); edgeTimer.current = null }
   }, [immersive, preferences.sidebarSide])
 
-  void projects
   const style = { '--sidebar-width': `${preferences.sidebarVisible ? preferences.sidebarWidth : 0}px`, '--editor-width': `${preferences.editorWidth}px`, '--editor-font-size': `${preferences.fontSize * preferences.zoom / 100}px`, '--editor-line-height': preferences.lineHeight, '--editor-font': preferences.fontFamily === 'serif' ? "'Noto Serif', 'DejaVu Serif', Georgia, serif" : preferences.fontFamily === 'mono' ? "'Ubuntu Mono', 'DejaVu Sans Mono', monospace" : "'Ubuntu', 'Noto Sans', sans-serif" } as CSSProperties
   return <div className={`app ${immersive ? 'immersive' : ''} sidebar-${preferences.sidebarSide} tabs-${preferences.tabsPosition} ${preferences.sidebarVisible ? '' : 'sidebar-hidden'}`} style={style}>
     <header className="titlebar chrome" data-tauri-drag-region>
@@ -170,32 +172,21 @@ export default function App() {
       <div className="window-title" data-tauri-drag-region>{activeNote.title}<span> · {activeNote.format.toUpperCase()}</span></div>
       <div className="window-controls"><IconButton label="Minimizar" onClick={() => isTauri() && void getCurrentWindow().minimize()}><Minus size={14} /></IconButton><IconButton label="Maximizar ou restaurar" onClick={() => isTauri() && void getCurrentWindow().toggleMaximize()}><Square size={11} /></IconButton><IconButton label="Fechar aplicativo" onClick={() => isTauri() && void getCurrentWindow().close()}><X size={16} /></IconButton></div>
     </header>
-    <aside className="sidebar chrome" aria-label="Navegação">
-      <div className="sidebar-heading"><span>SEU ESPAÇO</span><IconButton label="Ocultar navegação" onClick={() => setPreferences(current => ({ ...current, sidebarVisible: false }))}><PanelLeftClose size={16} /></IconButton></div>
-      <button className="nav-button primary-nav" onClick={newNote}><Plus size={17} /><span>Nova nota</span><kbd>{preferences.shortcuts.new}</kbd></button>
-      <button className="nav-button" onClick={() => void fileOps.openDocument()}><FolderOpen size={16} /><span>Abrir documento</span><kbd>{preferences.shortcuts.open}</kbd></button>
-      <button className="nav-button" onClick={() => { setFind('find'); setImmersive(false) }}><Search size={16} /><span>Buscar no texto</span><kbd>Ctrl F</kbd></button>
-      <div className="section-heading"><span>PROJETOS</span></div>
-      <div className="empty-projects"><BookOpen size={23} strokeWidth={1.3} /><p>Ideias ganham espaço.<br /><span>Seus projetos ficarão aqui.</span></p></div>
-      <div className="sidebar-bottom"><div className="local-indicator"><span />Seu espaço é local.</div><button className="nav-button" onClick={() => { setSettings(true); setImmersive(false) }}><Settings2 size={17} /><span>Configurações</span></button></div>
-      <div className="sidebar-resizer" role="separator" aria-label="Largura da navegação" aria-orientation="vertical" tabIndex={0} onKeyDown={event => { if (['ArrowLeft', 'ArrowRight'].includes(event.key)) setPreferences(current => ({ ...current, sidebarWidth: Math.min(380, Math.max(200, current.sidebarWidth + (event.key === 'ArrowRight' ? 10 : -10))) })) }} onPointerDown={event => {
-        const target = event.currentTarget; target.setPointerCapture(event.pointerId)
-        const start = event.clientX, width = preferences.sidebarWidth
-        const move = (moveEvent: PointerEvent) => setPreferences(current => ({ ...current, sidebarWidth: Math.max(200, Math.min(380, width + (moveEvent.clientX - start) * (preferences.sidebarSide === 'left' ? 1 : -1))) }))
-        const end = () => { target.removeEventListener('pointermove', move); target.removeEventListener('pointerup', end) }
-        target.addEventListener('pointermove', move); target.addEventListener('pointerup', end)
-      }} />
-    </aside>
+    <Sidebar preferences={preferences} projects={projects} documents={documents} activePath={activeNote.path} newNote={newNote} openDocument={() => void fileOps.openDocument()} openPath={fileOps.openPath} settings={() => { setSettings(true); setImmersive(false) }} search={() => { setLibrarySearch(true); setImmersive(false) }} changePreferences={change => setPreferences(current => ({ ...current, ...change }))} refresh={refresh} notify={notify} ask={dialog.ask} onDeletedProject={id => setNotes(current => current.map(note => note.projectId === id ? { ...note, projectId: null } : note))} onAssociate={(path, projectId) => setNotes(current => current.map(note => note.path === path ? { ...note, projectId } : note))} />
     <section className="workspace">
       <div className="tabs chrome" role="tablist" aria-label="Documentos abertos">
         {!preferences.sidebarVisible && <IconButton label="Mostrar navegação" onClick={() => setPreferences(current => ({ ...current, sidebarVisible: true }))}><PanelLeftOpen size={17} /></IconButton>}
         {notes.map(note => <div key={note.id} className={`tab ${note.id === activeId ? 'active' : ''}`} role="tab" tabIndex={0} aria-selected={note.id === activeId} draggable onDragStart={() => { dragged.current = note.id }} onDragOver={event => event.preventDefault()} onDrop={event => { event.preventDefault(); setNotes(current => moveItem(current, current.findIndex(item => item.id === dragged.current), current.findIndex(item => item.id === note.id))); dragged.current = null }} onClick={() => { setActiveId(note.id); setSelectionRect(null) }} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') setActiveId(note.id) }}>
           <FileText size={14} /><span>{note.title}</span>{note.dirty && <i className="dirty-dot" title="Alterações não salvas" />}<IconButton label={`Fechar ${note.title}`} onClick={event => { event.stopPropagation(); closeNote(note.id) }}><X size={13} /></IconButton>
         </div>)}
-        <IconButton label="Nova aba" onClick={newNote}><Plus size={16} /></IconButton>
+        <IconButton label="Nova aba" onClick={() => newNote()}><Plus size={16} /></IconButton>
       </div>
       <div className="document-area">
-        <div className="document-toolbar chrome"><div className="document-menu-wrapper"><button className="document-menu" aria-expanded={menu} onClick={() => setMenu(value => !value)}><FileText size={15} /><span>{activeNote.path ? activeNote.title : 'Rascunho'}</span><ChevronDown size={13} /></button>{menu && <div className="dropdown" role="menu"><button role="menuitem" onClick={() => { newNote(); setMenu(false) }}><Plus size={15} />Nova nota<kbd>Ctrl N</kbd></button><button role="menuitem" onClick={() => { void fileOps.openDocument(); setMenu(false) }}><FolderOpen size={15} />Abrir documento<kbd>Ctrl O</kbd></button><button role="menuitem" onClick={() => { void fileOps.saveNote(activeId); setMenu(false) }}><Save size={15} />Salvar<kbd>Ctrl S</kbd></button><button role="menuitem" onClick={() => { void fileOps.saveNote(activeId, true); setMenu(false) }}><Save size={15} />Salvar como<kbd>Ctrl Shift S</kbd></button><button role="menuitem" onClick={() => { setFind('find'); setMenu(false) }}><Search size={15} />Pesquisar<kbd>Ctrl F</kbd></button><button role="menuitem" onClick={() => { setSettings(true); setMenu(false) }}><Settings2 size={15} />Configurações</button></div>}</div><div className="document-actions"><IconButton label="Salvar documento" onClick={() => void fileOps.saveNote(activeId)}><Save size={16} /></IconButton><IconButton label="Ferramentas de formatação" aria-pressed={toolbar} onClick={() => setToolbar(value => !value)}><SlidersHorizontal size={17} /></IconButton><IconButton label="Modo imersivo (Ctrl+Shift+F)" onClick={() => { setImmersive(true); activeEditor?.commands.focus() }}><Maximize2 size={16} /></IconButton></div></div>
+        <div className="document-toolbar chrome"><div className="document-menu-wrapper"><button className="document-menu" aria-expanded={menu} onClick={() => setMenu(value => !value)}><FileText size={15} /><span>{activeNote.path ? activeNote.title : 'Rascunho'}</span><ChevronDown size={13} /></button>{menu && <div className="dropdown" role="menu"><button role="menuitem" onClick={() => { newNote(); setMenu(false) }}><Plus size={15} />Nova nota<kbd>Ctrl N</kbd></button><button role="menuitem" onClick={() => { void fileOps.openDocument(); setMenu(false) }}><FolderOpen size={15} />Abrir documento<kbd>Ctrl O</kbd></button><button role="menuitem" onClick={() => { void fileOps.saveNote(activeId); setMenu(false) }}><Save size={15} />Salvar<kbd>Ctrl S</kbd></button><button role="menuitem" onClick={() => { void fileOps.saveNote(activeId, true); setMenu(false) }}><Save size={15} />Salvar como<kbd>Ctrl Shift S</kbd></button><button role="menuitem" onClick={() => { setFind('find'); setMenu(false) }}><Search size={15} />Pesquisar<kbd>Ctrl F</kbd></button><button role="menuitem" onClick={() => { setSettings(true); setMenu(false) }}><Settings2 size={15} />Configurações</button></div>}</div><div className="document-actions"><select className="project-assignment" aria-label="Projeto do documento atual" value={activeNote.projectId ?? ''} onChange={event => {
+          const projectId = event.target.value || null
+          if (activeNote.path) void backend.associate(activeNote.path, projectId).then(async () => { setNotes(current => updateNote(current, activeId, { projectId })); await refresh() }).catch(error => notify(errorMessage(error)))
+          else setNotes(current => updateNote(current, activeId, { projectId }))
+        }}><option value="">Sem projeto</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select><IconButton label="Salvar documento" onClick={() => void fileOps.saveNote(activeId)}><Save size={16} /></IconButton><IconButton label="Ferramentas de formatação" aria-pressed={toolbar} onClick={() => setToolbar(value => !value)}><SlidersHorizontal size={17} /></IconButton><IconButton label="Modo imersivo (Ctrl+Shift+F)" onClick={() => { setImmersive(true); activeEditor?.commands.focus() }}><Maximize2 size={16} /></IconButton></div></div>
         <div className="formatting-slot chrome">{toolbar && activeEditor && <Formatting editor={activeEditor} insertImage={() => void chooseImage()} insertLink={() => setLink(activeEditor.getAttributes('link').href || '')} />}</div>
         <div className="document-caption chrome"><span className="eyebrow">{activeNote.path ? 'DOCUMENTO' : 'UMA NOVA PÁGINA'}</span><div className="caption-meta"><span className="small-line" />{activeNote.path ? 'Salve quando quiser.' : 'Sem pressa. Sem distrações.'}</div></div>
         {notes.map(note => <EditorPane key={note.id} note={note} active={note.id === activeId} preferences={preferences} onReady={onReady} onChange={onChange} onTyping={onTyping} onImages={insertImages} onStats={note.id === activeId ? onStats : () => {}} onSelection={note.id === activeId ? setSelectionRect : () => {}} />)}
@@ -204,6 +195,7 @@ export default function App() {
         {!activeNote.dirty && !activeNote.path && <div className="writing-hint chrome"><Keyboard size={13} /><span>Comece a escrever. O resto desaparece.</span></div>}
       </div>
     </section>
+    {librarySearch && <LibrarySearch onClose={() => setLibrarySearch(false)} onOpen={fileOps.openPath} />}
     {settings && <Settings preferences={preferences} onChange={change => setPreferences(current => ({ ...current, ...change }))} onClose={closeSettings} />}
     {link !== null && <Modal title="Inserir link" onClose={() => setLink(null)}><form className="modal-body" onSubmit={event => { event.preventDefault(); if (link && !/^(https?:\/\/|mailto:)/i.test(link)) { notify('Use um endereço https://, http:// ou mailto:.'); return } if (link) activeEditor?.chain().focus().extendMarkRange('link').setLink({ href: link }).run(); else activeEditor?.chain().focus().unsetLink().run(); setLink(null) }}><label>Endereço<input autoFocus type="text" placeholder="https://" value={link} onChange={event => setLink(event.target.value)} /></label><div className="modal-actions"><button type="button" onClick={() => setLink(null)}>Cancelar</button><button className="primary" type="submit">Aplicar</button></div></form></Modal>}
     {dialog.element}
