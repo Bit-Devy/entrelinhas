@@ -8,107 +8,266 @@ import { parseDocument, serializeHtml } from '../editor/serialization'
 import type { AskDialog } from '../components/useDialog'
 
 interface Options {
-  notes: Note[]; setNotes: Dispatch<SetStateAction<Note[]>>; setActiveId: Dispatch<SetStateAction<string>>
-  editors: RefObject<Map<string, Editor>>; preferences: Preferences
-  documents: RegisteredDocument[]; ask: AskDialog; notify: (message: string) => void; refresh: () => Promise<void>
+  notes: Note[]
+  setNotes: Dispatch<SetStateAction<Note[]>>
+  setActiveId: Dispatch<SetStateAction<string>>
+  editors: RefObject<Map<string, Editor>>
+  preferences: Preferences
+  documents: RegisteredDocument[]
+  ask: AskDialog
+  notify: (message: string) => void
+  refresh: () => Promise<void>
 }
 
 export function useDocuments(options: Options) {
-  const current = useRef(options); current.current = options
+  const current = useRef(options)
+  current.current = options
   const saving = useRef(new Set<string>())
+  const saveWaiters = useRef<(() => void)[]>([])
   const opening = useRef(new Set<string>())
 
   const openPath = useCallback(async function openPath(path: string): Promise<boolean> {
-    const { notes, setNotes, setActiveId, documents, notify, refresh } = current.current
-    const duplicate = notes.find(note => note.path === path)
-    if (duplicate) { setActiveId(duplicate.id); return true }
+    const { notes, setNotes, setActiveId, notify, refresh } = current.current
+    const duplicate = notes.find((note) => note.path === path)
+    if (duplicate) {
+      setActiveId(duplicate.id)
+      return true
+    }
     if (opening.current.has(path)) return false
     opening.current.add(path)
     try {
       const read = await backend.read(path)
-      const canonical = current.current.notes.find(note => note.path === read.path)
-      if (canonical) { setActiveId(canonical.id); return true }
+      const canonical = current.current.notes.find((note) => note.path === read.path)
+      if (canonical) {
+        setActiveId(canonical.id)
+        return true
+      }
       const content = parseDocument(read.content, read.format)
       let unavailable = 0
       const hydrate = async (node: JSONContent): Promise<void> => {
-        if (node.type === 'image' && node.attrs?.src && !String(node.attrs.src).startsWith('data:')) {
-          try { node.attrs.src = await backend.image(read.path, node.attrs.src) } catch { unavailable++ }
+        if (
+          node.type === 'image' &&
+          node.attrs?.src &&
+          !String(node.attrs.src).startsWith('data:')
+        ) {
+          try {
+            node.attrs.src = await backend.image(read.path, node.attrs.src)
+          } catch {
+            unavailable++
+          }
         }
         await Promise.all((node.content ?? []).map(hydrate))
       }
       await hydrate(content)
-      const note: Note = { ...createNote(read.format), title: read.title, path: read.path, version: read.version, content, savedContent: JSON.stringify(content), projectId: documents.find(item => item.path === read.path)?.projectId ?? null }
-      setNotes(existing => [...existing, note]); setActiveId(note.id)
-      if (unavailable) notify(`${unavailable} imagem(ns) indisponível(is). As referências foram mantidas. Imagens remotas não são baixadas automaticamente.`)
+      const note: Note = {
+        ...createNote(read.format),
+        title: read.title,
+        path: read.path,
+        version: read.version,
+        content,
+        savedContent: JSON.stringify(content),
+        projectId:
+          current.current.documents.find((item) => item.path === read.path)?.projectId ?? null,
+      }
+      setNotes((existing) => [...existing, note])
+      setActiveId(note.id)
+      if (unavailable)
+        notify(
+          `${unavailable} imagem(ns) indisponível(is). As referências foram mantidas. Imagens remotas não são baixadas automaticamente.`,
+        )
       await refresh()
       return true
     } catch (error) {
       if (errorCode(error) === 'missing') {
-        const choice = await current.current.ask({ title: 'Arquivo não encontrado', message: 'O arquivo pode ter sido movido ou apagado. Escolha seu novo local para atualizar a referência; nenhum arquivo será movido.', choices: [{ id: 'cancel', label: 'Cancelar' }, { id: 'locate', label: 'Localizar novamente', primary: true }] })
+        const choice = await current.current.ask({
+          title: 'Arquivo não encontrado',
+          message:
+            'O arquivo pode ter sido movido ou apagado. Escolha seu novo local para atualizar a referência; nenhum arquivo será movido.',
+          choices: [
+            { id: 'cancel', label: 'Cancelar' },
+            { id: 'locate', label: 'Localizar novamente', primary: true },
+          ],
+        })
         if (choice === 'locate') {
           try {
-            const selected = await open({ title: 'Localizar documento', filters: [{ name: 'Documentos', extensions: ['md', 'markdown', 'txt'] }] })
-            if (typeof selected === 'string') { await backend.relocate(path, selected); await refresh(); return await openPath(selected) }
-          } catch (locateError) { notify(errorMessage(locateError)) }
+            const selected = await open({
+              title: 'Localizar documento',
+              filters: [{ name: 'Documentos', extensions: ['md', 'markdown', 'txt'] }],
+            })
+            if (typeof selected === 'string') {
+              await backend.relocate(path, selected)
+              await refresh()
+              return await openPath(selected)
+            }
+          } catch (locateError) {
+            notify(errorMessage(locateError))
+          }
         }
       } else notify(`Não foi possível abrir o documento: ${errorMessage(error)}`)
       return false
+    } finally {
+      opening.current.delete(path)
     }
-    finally { opening.current.delete(path) }
   }, [])
 
   const openDocument = useCallback(async () => {
     try {
-      const selected = await open({ title: 'Abrir documento', multiple: true, filters: [{ name: 'Documentos', extensions: ['md', 'markdown', 'txt'] }] })
-      for (const path of Array.isArray(selected) ? selected : selected ? [selected] : []) await openPath(path)
-    } catch (error) { current.current.notify(errorMessage(error)) }
+      const selected = await open({
+        title: 'Abrir documento',
+        multiple: true,
+        filters: [{ name: 'Documentos', extensions: ['md', 'markdown', 'txt'] }],
+      })
+      for (const path of Array.isArray(selected) ? selected : selected ? [selected] : [])
+        await openPath(path)
+    } catch (error) {
+      current.current.notify(errorMessage(error))
+    }
   }, [openPath])
 
   const saveNote = useCallback(async (id: string, saveAs = false): Promise<boolean> => {
     if (saving.current.has(id)) return false
     saving.current.add(id)
     const { notes, editors, setNotes, ask, notify, refresh } = current.current
-    const note = notes.find(note => note.id === id), editor = editors.current.get(id)
-    if (!note || !editor) { saving.current.delete(id); return false }
+    const note = notes.find((note) => note.id === id),
+      editor = editors.current.get(id)
+    if (!note || !editor) {
+      saving.current.delete(id)
+      return false
+    }
     try {
       let path = note.path
       if (!path || saveAs) {
-        path = await save({ title: 'Salvar como', defaultPath: note.path ?? `Sem título.${note.format}`, filters: [{ name: 'Markdown (.md)', extensions: ['md'] }, { name: 'Texto simples (.txt)', extensions: ['txt'] }] })
+        const filters = [
+          { name: 'Markdown (.md)', extensions: ['md'] },
+          { name: 'Texto simples (.txt)', extensions: ['txt'] },
+        ]
+        path = await save({
+          title: 'Salvar como',
+          defaultPath: note.path ?? `Sem título.${note.format}`,
+          filters: note.format === 'txt' ? [...filters].reverse() : filters,
+        })
         if (!path) return false
         if (!/\.[^/]+$/.test(path)) path += `.${note.format}`
       }
-      if (!/\.(md|markdown|txt)$/i.test(path)) { notify('Use a extensão .md ou .txt para escolher o formato.'); return false }
-      if (current.current.notes.some(other => other.id !== id && other.path === path)) { notify('Este arquivo já está aberto em outra aba. Salve com outro nome.'); return false }
+      if (!/\.(md|markdown|txt)$/i.test(path)) {
+        notify('Use a extensão .md ou .txt para escolher o formato.')
+        return false
+      }
+      if (current.current.notes.some((other) => other.id !== id && other.path === path)) {
+        notify('Este arquivo já está aberto em outra aba. Salve com outro nome.')
+        return false
+      }
       const format = /\.txt$/i.test(path) ? 'txt' : 'md'
       const snapshot = editor.state.doc
       const json = editor.getJSON()
+      if (format === 'md' && path !== note.path) {
+        const unresolved: string[] = []
+        const inspect = (node: JSONContent) => {
+          const source = String(node.attrs?.src ?? '')
+          if (node.type === 'image' && source && !/^(data:|https?:|\/)/i.test(source))
+            unresolved.push(source)
+          node.content?.forEach(inspect)
+        }
+        inspect(json)
+        if (unresolved.length) {
+          const choice = await ask({
+            title: 'Há imagens indisponíveis',
+            message: `${unresolved.length} imagem(ns) têm referências relativas que não puderam ser carregadas. Ao salvar em outra pasta, essas referências podem deixar de apontar para o local correto. Deseja preservá-las mesmo assim?`,
+            choices: [
+              { id: 'cancel', label: 'Cancelar' },
+              { id: 'references', label: 'Preservar referências', primary: true },
+            ],
+          })
+          if (choice !== 'references') return false
+        }
+      }
       if (format === 'txt' && hasFormatting(json)) {
-        const choice = await ask({ title: 'Salvar como texto simples?', message: 'TXT preserva somente o texto. Formatação, tabelas e imagens não serão mantidas no arquivo. O documento aberto continuará com a formatação até ser fechado.', choices: [{ id: 'cancel', label: 'Cancelar' }, { id: 'text', label: 'Salvar somente o texto', primary: true }] })
+        const choice = await ask({
+          title: 'Salvar como texto simples?',
+          message:
+            'TXT preserva somente o texto. Formatação, tabelas e imagens não serão mantidas no arquivo. O documento aberto continuará com a formatação até ser fechado.',
+          choices: [
+            { id: 'cancel', label: 'Cancelar' },
+            { id: 'text', label: 'Salvar somente o texto', primary: true },
+          ],
+        })
         if (choice !== 'text') return false
       }
-      const serialized = format === 'txt' ? { content: textFromDocument(json), assets: [] } : serializeHtml(editor.getHTML())
+      const serialized =
+        format === 'txt'
+          ? { content: textFromDocument(json), assets: [] }
+          : serializeHtml(editor.getHTML())
       let result
-      const request = { path, ...serialized, expectedVersion: path === note.path ? note.version : null, overwrite: false, projectId: note.projectId }
-      try { result = await backend.save(request) }
-      catch (error) {
+      const request = {
+        path,
+        ...serialized,
+        expectedVersion: path === note.path ? note.version : null,
+        overwrite: false,
+        projectId: note.projectId,
+      }
+      try {
+        result = await backend.save(request)
+      } catch (error) {
         if (errorCode(error) !== 'conflict') throw error
-        const choice = await ask({ title: 'O arquivo no disco é diferente', message: `${errorMessage(error)}\n\nDeseja substituir o arquivo por esta versão? Você também pode cancelar e usar Salvar como.`, choices: [{ id: 'cancel', label: 'Cancelar' }, { id: 'overwrite', label: 'Substituir arquivo', danger: true }] })
+        const choice = await ask({
+          title: 'O arquivo no disco é diferente',
+          message: `${errorMessage(error)}\n\nDeseja substituir o arquivo por esta versão? Você também pode cancelar e usar Salvar como.`,
+          choices: [
+            { id: 'cancel', label: 'Cancelar' },
+            { id: 'overwrite', label: 'Substituir arquivo', danger: true },
+          ],
+        })
         if (choice !== 'overwrite') return false
         result = await backend.save({ ...request, overwrite: true })
       }
-      setNotes(existing => updateNote(existing, id, { path: result.path, title: result.title, version: result.version, format, dirty: !editor.state.doc.eq(snapshot), savedContent: JSON.stringify(json) }))
+      setNotes((existing) =>
+        updateNote(existing, id, {
+          path: result.path,
+          title: result.title,
+          version: result.version,
+          format,
+          dirty: !editor.state.doc.eq(snapshot),
+          savedContent: JSON.stringify(json),
+        }),
+      )
       notify(result.warning ?? `Salvo · ${result.title}`)
       await refresh()
       return true
-    } catch (error) { notify(`Não foi possível salvar: ${errorMessage(error)}`); return false }
-    finally { saving.current.delete(id) }
+    } catch (error) {
+      notify(`Não foi possível salvar: ${errorMessage(error)}`)
+      return false
+    } finally {
+      saving.current.delete(id)
+      if (!saving.current.size) saveWaiters.current.splice(0).forEach((resolve) => resolve())
+    }
   }, [])
 
-  const mayDiscard = useCallback(async (note: Note): Promise<boolean> => {
-    const { preferences, ask } = current.current
-    if (!preferences.askBeforeDiscard || !note.dirty) return true
-    const choice = await ask({ title: 'Salvar antes de fechar?', message: `“${note.title}” tem alterações não salvas. Ao descartar, o texto não poderá ser recuperado.`, choices: [{ id: 'cancel', label: 'Cancelar' }, { id: 'discard', label: 'Descartar', danger: true }, { id: 'save', label: 'Salvar', primary: true }] })
-    return choice === 'discard' || (choice === 'save' && await saveNote(note.id))
-  }, [saveNote])
-  return { openPath, openDocument, saveNote, mayDiscard }
+  // Fechar a janela deve aguardar uma gravação manual que já foi solicitada.
+  const waitForSaves = useCallback(
+    (): Promise<void> =>
+      saving.current.size
+        ? new Promise((resolve) => saveWaiters.current.push(resolve))
+        : Promise.resolve(),
+    [],
+  )
+
+  const mayDiscard = useCallback(
+    async (note: Note): Promise<boolean> => {
+      const { preferences, ask } = current.current
+      note = current.current.notes.find((currentNote) => currentNote.id === note.id) ?? note
+      if (!preferences.askBeforeDiscard || !note.dirty) return true
+      const choice = await ask({
+        title: 'Salvar antes de fechar?',
+        message: `“${note.title}” tem alterações não salvas. Ao descartar, o texto não poderá ser recuperado.`,
+        choices: [
+          { id: 'cancel', label: 'Cancelar' },
+          { id: 'discard', label: 'Descartar', danger: true },
+          { id: 'save', label: 'Salvar', primary: true },
+        ],
+      })
+      return choice === 'discard' || (choice === 'save' && (await saveNote(note.id)))
+    },
+    [saveNote],
+  )
+  return { openPath, openDocument, saveNote, mayDiscard, waitForSaves }
 }

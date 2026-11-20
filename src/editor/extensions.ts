@@ -11,12 +11,37 @@ import { SearchExtension } from './search'
 
 export function editorExtensions(placeholder = true) {
   return [
-    StarterKit.configure({ link: { openOnClick: false, autolink: true, protocols: ['https', 'http', 'mailto'] } }),
-    TextStyleKit, TextAlign.configure({ types: ['heading', 'paragraph'] }),
+    StarterKit.configure({
+      link: { openOnClick: false, autolink: true, protocols: ['https', 'http', 'mailto'] },
+    }),
+    TextStyleKit,
+    TextAlign.configure({ types: ['heading', 'paragraph'] }),
     Highlight.configure({ multicolor: true }),
-    Image.configure({ allowBase64: true, resize: { enabled: true, directions: ['bottom-right', 'bottom-left'], minWidth: 60, minHeight: 40, alwaysPreserveAspectRatio: true } }),
+    Image.configure({
+      allowBase64: true,
+      resize: {
+        enabled: true,
+        directions: ['bottom-right', 'bottom-left'],
+        minWidth: 60,
+        minHeight: 40,
+        alwaysPreserveAspectRatio: true,
+      },
+    }),
     TableKit.configure({ table: { resizable: true } }),
-    TaskList, TaskItem.configure({ nested: true }), SearchExtension,
-    ...(placeholder ? [Placeholder.configure({ placeholder: 'Comece a escrever…', emptyEditorClass: 'is-editor-empty' })] : []),
+    TaskList,
+    TaskItem.configure({
+      nested: true,
+      HTMLAttributes: { 'data-type': 'taskItem' },
+      a11y: { checkboxLabel: (node) => `Marcar tarefa: ${node.textContent || 'sem texto'}` },
+    }),
+    SearchExtension,
+    ...(placeholder
+      ? [
+          Placeholder.configure({
+            placeholder: 'Comece a escrever…',
+            emptyEditorClass: 'is-editor-empty',
+          }),
+        ]
+      : []),
   ]
 }

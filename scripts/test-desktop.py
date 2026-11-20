@@ -1,0 +1,369 @@
+#!/usr/bin/env python3
+"""Testes reais do Tauri/WebKitGTK. Usa uma biblioteca e arquivos isolados."""
+import argparse
+import base64
+import json
+import http.client
+import os
+from pathlib import Path
+import shutil
+import socket
+import subprocess
+import tempfile
+import time
+import urllib.request
+import urllib.error
+
+
+def wait(check, description, timeout=15):
+    deadline = time.monotonic() + timeout
+    last = None
+    while time.monotonic() < deadline:
+        try:
+            result = check()
+            if result:
+                return result
+        except Exception as error:
+            last = error
+        time.sleep(0.08)
+    raise AssertionError(f'Tempo excedido: {description}; último erro: {last}')
+
+
+def free_port():
+    with socket.socket() as sock:
+        sock.bind(('127.0.0.1', 0))
+        return sock.getsockname()[1]
+
+
+class Desktop:
+    def __init__(self, url, application):
+        self.url, self.application, self.session = url, application, None
+
+    def request(self, path, value=None, method=None):
+        data = None if value is None else json.dumps(value).encode()
+        request = urllib.request.Request(self.url + path, data, {'Content-Type': 'application/json'}, method=method)
+        # O proxy do tauri-driver pode reutilizar uma conexão já encerrada pelo
+        # WebKitWebDriver. Repetimos apenas leituras; cliques nunca são repetidos.
+        read_only = path.endswith('/element') or (value is None and method != 'DELETE')
+        for attempt in range(3):
+            try:
+                with urllib.request.urlopen(request, timeout=35) as response:
+                    return json.load(response)['value']
+            except urllib.error.HTTPError as error:
+                raise RuntimeError(error.read().decode()) from error
+            except (http.client.RemoteDisconnected, ConnectionResetError):
+                if not read_only or attempt == 2:
+                    raise
+                time.sleep(.1)
+
+    def start(self):
+        result = self.request('/session', {'capabilities': {'alwaysMatch': {'tauri:options': {'application': str(self.application)}}}})
+        self.session = result['sessionId']
+        wait(lambda: self.js('return !!document.querySelector(".tiptap")?.editor'), 'editor inicial')
+        wait(lambda: self.ipc('load_library') is not None, 'SQLite')
+
+    def call(self, path, value=None, method=None):
+        return self.request('/session/' + self.session + path, value, method)
+
+    def js(self, script, *args):
+        return self.call('/execute/sync', {'script': script, 'args': list(args)})
+
+    def ipc(self, command, **args):
+        result = self.call('/execute/async', {'script': 'const done=arguments[arguments.length-1];window.__TAURI_INTERNALS__.invoke(arguments[0],arguments[1]).then(done).catch(e=>done({__error:e}));', 'args': [command, args]})
+        if isinstance(result, dict) and '__error' in result:
+            raise RuntimeError(result['__error'])
+        return result
+
+    def element(self, css):
+        return self.call('/element', {'using': 'css selector', 'value': css})['element-6066-11e4-a52e-4f735466cecf']
+
+    def click(self, css):
+        self.call('/element/' + self.element(css) + '/click', {})
+
+    def keys(self, css, text):
+        self.call('/element/' + self.element(css) + '/value', {'text': text})
+
+    def key(self, key, ctrl=False, shift=False):
+        self.js('window.dispatchEvent(new KeyboardEvent("keydown",{key:arguments[0],ctrlKey:arguments[1],shiftKey:arguments[2],bubbles:true,cancelable:true}))', key, ctrl, shift)
+
+    def editor(self, expression, *args):
+        return self.js('const editor=document.querySelector(".editor-scroll:not(.inactive) .tiptap").editor;' + expression, *args)
+
+    def reveal(self):
+        self.key('Escape')
+        wait(lambda: self.js('return getComputedStyle(document.querySelector(".titlebar")).opacity==="1"'), 'revelar interface')
+
+    def screenshot(self, path):
+        path.write_bytes(base64.b64decode(self.call('/screenshot')))
+
+    def stop(self):
+        if self.session:
+            try:
+                self.call('', method='DELETE')
+            except Exception:
+                pass
+            self.session = None
+
+
+def native_chooser(data_home, filename=None):
+    # AT-SPI atua apenas na instância de teste; nunca em outra janela do usuário.
+    import gi
+    gi.require_version('Atspi', '2.0')
+    from gi.repository import Atspi
+
+    def walk(node):
+        yield node
+        for index in range(max(0, node.get_child_count())):
+            yield from walk(node.get_child_at_index(index))
+
+    def find_dialog():
+        root = Atspi.get_desktop(0)
+        for index in range(root.get_child_count()):
+            app = root.get_child_at_index(index)
+            if app.get_name() != 'entrelinhas':
+                continue
+            try:
+                environment = Path(f'/proc/{app.get_process_id()}/environ').read_bytes()
+            except OSError:
+                continue
+            if f'XDG_DATA_HOME={data_home}'.encode() not in environment.split(b'\0'):
+                continue
+            for child in range(app.get_child_count()):
+                dialog = app.get_child_at_index(child)
+                if dialog.get_role_name() == 'file chooser' and dialog.get_state_set().contains(Atspi.StateType.SHOWING):
+                    return dialog
+        return None
+
+    dialog = wait(find_dialog, 'seletor nativo do GNOME')
+    if filename:
+        entry = next(node for node in walk(dialog) if node.get_role_name() == 'text' and node.get_state_set().contains(Atspi.StateType.SHOWING))
+        assert Atspi.EditableText.set_text_contents(entry, str(filename))
+    labels = ('Save', 'Salvar') if filename else ('Cancel', 'Cancelar')
+    button = next(node for node in walk(dialog) if node.get_role_name() == 'button' and node.get_name() in labels)
+    assert Atspi.Action.do_action(button, 0)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--binary', default='src-tauri/target/debug/entrelinhas')
+    parser.add_argument('--screenshots', default='artifacts/screenshots')
+    args = parser.parse_args()
+    root = Path(__file__).resolve().parents[1]
+    output = (root / args.screenshots).resolve()
+    output.mkdir(parents=True, exist_ok=True)
+    driver = shutil.which('tauri-driver') or str(Path.home() / '.cargo/bin/tauri-driver')
+    native_driver = os.environ.get('WEBKIT_WEBDRIVER') or shutil.which('WebKitWebDriver')
+    if not native_driver:
+        raise SystemExit('Instale webkitgtk-webdriver ou defina WEBKIT_WEBDRIVER.')
+    with tempfile.TemporaryDirectory(prefix='entrelinhas-e2e-') as temporary:
+        directory = Path(temporary)
+        data_home = directory / 'xdg'
+        downloads = directory / 'Downloads'
+        downloads.mkdir()
+        port, native_port = free_port(), free_port()
+        environment = {**os.environ, 'XDG_DATA_HOME': str(data_home)}
+        log = (output.parent / 'desktop-driver.log').open('w')
+        process = subprocess.Popen([driver, '--port', str(port), '--native-port', str(native_port), '--native-driver', native_driver], env=environment, stdout=log, stderr=log)
+        app = Desktop(f'http://127.0.0.1:{port}', (root / args.binary).resolve())
+        results = []
+        def passed(name):
+            results.append(name)
+            print('OK · ' + name, flush=True)
+        try:
+            wait(lambda: urllib.request.urlopen(f'http://127.0.0.1:{port}/status', timeout=1).status == 200, 'WebDriver')
+            app.start()
+            assert app.editor('return editor.getText()') == ''
+            assert app.js('return document.querySelectorAll("[role=tab]").length') == 1
+            passed('inicialização em nota vazia')
+            before = app.js('return document.querySelector(".tiptap").getBoundingClientRect().toJSON()')
+            app.keys('.tiptap', 'RASCUNHO_DESCARTADO_739 Português 日本語')
+            wait(lambda: app.js('return document.querySelector(".app").classList.contains("immersive")'), 'imersão automática')
+            after = app.js('return document.querySelector(".tiptap").getBoundingClientRect().toJSON()')
+            assert before['left'] == after['left'] and before['top'] == after['top']
+            wait(lambda: app.js('return getComputedStyle(document.querySelector(".titlebar")).visibility==="hidden"'), 'ocultar controles')
+            assert app.js('return !!document.querySelector(".block-caret")')
+            app.screenshot(output / 'imersivo.png')
+            app.reveal()
+            passed('imersão, cursor em bloco, posição estável e Esc')
+            app.click('[aria-label="Fechar aplicativo"]')
+            time.sleep(.3)
+            app.stop()
+            app.start()
+            assert app.editor('return editor.getText()') == ''
+            for path in data_home.rglob('*'):
+                if path.is_file():
+                    assert b'RASCUNHO_DESCARTADO_739' not in path.read_bytes(), str(path)
+            passed('fechar e reabrir descarta rascunhos sem recuperação')
+            app.click('[aria-label="Criar projeto"]')
+            app.keys('.modal input[maxlength="120"]', 'Caderno de ideias')
+            app.click('.modal button[type="submit"]')
+            wait(lambda: len(app.ipc('load_library')['projects']) == 1, 'criar projeto')
+            project_id = app.ipc('load_library')['projects'][0]['id']
+            app.js('const select=document.querySelector(".project-assignment");select.value=arguments[0];select.dispatchEvent(new Event("change",{bubbles:true}));', project_id)
+            rich = '<h1>O que cabe entre as linhas</h1><p>Algumas ideias só precisam de um pouco de espaço para encontrar sua própria forma.</p><p>Escrever é também prestar atenção: ao que passou, ao que permanece e ao que ainda pode nascer.</p><blockquote><p>Deixe uma página aberta para o inesperado.</p></blockquote><h2>Um começo simples</h2><ul data-type="taskList"><li data-type="taskItem" data-checked="true"><div><p>Encontrar um lugar tranquilo</p></div></li><li data-type="taskItem" data-checked="false"><div><p>Dar tempo às ideias</p></div></li></ul>'
+            app.editor('editor.commands.setContent(arguments[0]); return true', rich)
+            app.key('s', ctrl=True)
+            note_path = downloads / 'Entre as linhas.md'
+            native_chooser(data_home, note_path)
+            wait(note_path.exists, 'salvar documento no disco')
+            wait(lambda: len(app.ipc('load_library')['documents']) == 1, 'registrar documento')
+            library = app.ipc('load_library')
+            assert library['documents'][0]['projectId'] == project_id
+            assert library['documents'][0]['path'] == str(note_path)
+            assert '# O que cabe entre as linhas' in note_path.read_text()
+            passed('Ctrl+S e seletor GNOME gravam Markdown em Downloads e associam projeto')
+            app.editor('editor.commands.insertContent(" ALTERAÇÃO_NÃO_SALVA");return true')
+            assert 'ALTERAÇÃO_NÃO_SALVA' not in note_path.read_text()
+            app.click('[aria-label="Fechar aplicativo"]')
+            time.sleep(.3)
+            app.stop()
+            app.start()
+            assert app.editor('return editor.getText()') == ''
+            library = app.ipc('load_library')
+            assert library['projects'][0]['id'] == project_id
+            assert library['documents'][0]['path'] == str(note_path)
+            app.click('.project-toggle')
+            app.click('.document-entry')
+            wait(lambda: app.editor('return editor.getText().includes("O que cabe")'), 'reabrir Markdown')
+            assert not app.editor('return editor.getText().includes("ALTERAÇÃO_NÃO_SALVA")')
+            passed('projetos persistem; alterações de documentos exigem salvamento manual')
+            app.click('.document-entry')
+            assert app.js('return document.querySelectorAll("[role=tab]").length') == 2
+            app.key('n', ctrl=True)
+            wait(lambda: app.js('return document.querySelectorAll("[role=tab]").length') == 3, 'nova aba')
+            app.key('w', ctrl=True)
+            wait(lambda: app.js('return document.querySelectorAll("[role=tab]").length') == 2, 'fechar aba')
+            passed('abas, atalhos e abertura sem duplicação')
+            app.click('.document-entry')
+            app.key('h', ctrl=True)
+            app.keys('[aria-label="Localizar no texto"]', 'ideias')
+            app.keys('[aria-label="Substituir por"]', 'palavras')
+            wait(lambda: app.js('return document.querySelector(".match-count").innerText.includes("2")'), 'pesquisa no documento')
+            app.js('return [...document.querySelectorAll(".find-bar button")].find(button=>button.textContent==="Todas").click()')
+            assert 'palavras' in app.editor('return editor.getText()')
+            app.reveal()
+            passed('localizar e substituir')
+            # Insere a imagem pela mesma transação utilizada pelo comando do editor.
+            image = root / 'src-tauri/icons/32x32.png'
+            data_url = app.ipc('import_image', path=str(image))
+            app.click('[aria-label="Ferramentas de formatação"]')
+            app.click('[aria-label="Inserir imagem"]')
+            native_chooser(data_home)
+            app.editor('editor.commands.focus("end");return true')
+            app.js('const bytes=Uint8Array.from(atob(arguments[0].split(",")[1]),c=>c.charCodeAt(0));const transfer=new DataTransfer();transfer.items.add(new File([bytes],"foto.png",{type:"image/png"}));document.querySelector(".editor-scroll:not(.inactive) .tiptap").dispatchEvent(new ClipboardEvent("paste",{clipboardData:transfer,bubbles:true,cancelable:true}));', data_url)
+            wait(lambda: app.js('return !!document.querySelector(".editor-scroll:not(.inactive) .tiptap img")'), 'colar imagem')
+            app.click('[aria-label="Ferramentas de formatação"]')
+            assert not note_path.with_suffix('.assets').exists()
+            app.key('s', ctrl=True)
+            wait(lambda: note_path.with_suffix('.assets').exists(), 'gravar recursos relativos')
+            assert 'data:image' not in note_path.read_text()
+            assert 'Entre%20as%20linhas.assets/' in note_path.read_text()
+            passed('imagens em memória até salvar e referências relativas reais')
+            app.click('[aria-label="Configurações"]')
+            for theme, label in [('light', 'Claro'), ('dark', 'Escuro'), ('sepia', 'Sépia Noturno')]:
+                app.js('return [...document.querySelectorAll(".theme-choice")].find(button=>button.innerText.includes(arguments[0])).click()', label)
+                wait(lambda: app.js('return document.documentElement.dataset.theme') == theme, 'tema ' + theme)
+                app.click('[aria-label="Fechar painel"]')
+                app.reveal()
+                app.editor('editor.commands.setTextSelection(1);editor.commands.blur();return true')
+                app.js('document.querySelector(".editor-scroll:not(.inactive)").scrollTop=0;document.querySelector(".toast button")?.click()')
+                time.sleep(.25)
+                app.screenshot(output / f'{theme}.png')
+                app.click('[aria-label="Configurações"]')
+            app.js('return [...document.querySelectorAll(".settings-nav button")].find(button=>button.innerText==="Cursor").click()')
+            app.js('return [...document.querySelectorAll(".cursor-choice")].find(button=>button.innerText.includes("Invisível")).click()')
+            assert app.js('return document.querySelector(".editor-scroll:not(.inactive)").dataset.cursor') == 'hidden'
+            app.js('return [...document.querySelectorAll(".cursor-choice")].find(button=>button.innerText.includes("Fino")).click()')
+            assert app.js('return document.querySelector(".editor-scroll:not(.inactive)").dataset.cursor') == 'thin'
+            app.click('[aria-label="Fechar painel"]')
+            app.click('[aria-label="Fechar aplicativo"]')
+            time.sleep(.3)
+            app.stop()
+            app.start()
+            assert app.js('return document.documentElement.dataset.theme') == 'sepia'
+            assert app.js('return document.querySelector(".editor-scroll").dataset.cursor') == 'thin'
+            passed('três temas, três cursores, capturas reais e preferências entre execuções')
+            app.click('[aria-label="Configurações"]')
+            app.js('document.querySelectorAll(".settings-content select")[0].value="right";document.querySelectorAll(".settings-content select")[0].dispatchEvent(new Event("change",{bubbles:true}));')
+            app.js('document.querySelectorAll(".settings-content select")[1].value="left";document.querySelectorAll(".settings-content select")[1].dispatchEvent(new Event("change",{bubbles:true}));')
+            app.click('[aria-label="Fechar painel"]')
+            assert app.js('return document.querySelector(".app").classList.contains("sidebar-right")')
+            assert app.js('return document.querySelector(".app").classList.contains("tabs-left")')
+            passed('navegação à direita e abas laterais')
+            app.key('F11')
+            wait(lambda: app.ipc('plugin:window|is_fullscreen', label='main'), 'entrar em tela cheia')
+            app.key('F11')
+            wait(lambda: not app.ipc('plugin:window|is_fullscreen', label='main'), 'sair da tela cheia')
+            passed('F11 alterna a tela cheia nativa')
+            # Compara alterações externas usando o arquivo já salvo.
+            app.click('.project-toggle')
+            app.click('.document-entry')
+            wait(lambda: app.editor('return editor.getText().includes("O que cabe")'), 'abrir documento antes do conflito')
+            app.editor('editor.commands.insertContent(" texto local");return true')
+            note_path.write_text('ALTERAÇÃO EXTERNA', encoding='utf-8')
+            app.key('s', ctrl=True)
+            wait(lambda: app.js('return !!document.querySelector("[role=dialog]")'), 'conflito de salvamento')
+            assert 'O arquivo no disco é diferente' in app.js('return document.body.innerText')
+            app.js('return [...document.querySelectorAll(".modal-actions button")].find(button=>button.innerText==="Cancelar").click()')
+            assert note_path.read_text() == 'ALTERAÇÃO EXTERNA'
+            passed('conflitos externos preservam o arquivo ao cancelar')
+            app.js('return [...document.querySelectorAll(".nav-button")].find(button=>button.innerText.includes("Buscar documentos")).click()')
+            app.keys('[aria-label="Buscar documentos salvos"]', 'EXTERNA')
+            wait(lambda: app.js('return !!document.querySelector(".search-result")'), 'busca nos arquivos salvos')
+            assert 'Entre as linhas.md' in app.js('return document.querySelector(".search-result").innerText')
+            app.click('[aria-label="Fechar painel"]')
+            passed('busca global lê o conteúdo salvo no disco')
+            app.click('[aria-label="Configurações"]')
+            app.js('return [...document.querySelectorAll(".settings-nav button")].find(button=>button.innerText==="Comportamento").click()')
+            app.js('document.querySelectorAll(".settings-content input.switch")[1].click()')
+            app.click('[aria-label="Fechar painel"]')
+            app.key('w', ctrl=True)
+            wait(lambda: app.js('return document.body.innerText.includes("Salvar antes de fechar?")'), 'confirmação configurável')
+            app.js('return [...document.querySelectorAll(".modal-actions button")].find(button=>button.innerText==="Cancelar").click()')
+            assert app.js('return document.querySelectorAll("[role=tab]").length') == 2
+            app.key('w', ctrl=True)
+            wait(lambda: app.js('return document.body.innerText.includes("Salvar antes de fechar?")'), 'confirmação de descarte')
+            app.js('return [...document.querySelectorAll(".modal-actions button")].find(button=>button.innerText==="Descartar").click()')
+            wait(lambda: app.js('return document.querySelectorAll("[role=tab]").length') == 1, 'descartar aba')
+            passed('confirmação de descarte opcional respeita cancelar e descartar')
+            app.click('[aria-label="Configurações"]')
+            app.js('return [...document.querySelectorAll(".settings-nav button")].find(button=>button.innerText==="Comportamento").click()')
+            app.js('document.querySelectorAll(".settings-content input.switch")[1].click()')
+            app.js('return [...document.querySelectorAll(".settings-nav button")].find(button=>button.innerText==="Arquivos").click()')
+            app.js('const select=document.querySelector(".settings-content select");select.value="txt";select.dispatchEvent(new Event("change",{bubbles:true}));')
+            app.click('[aria-label="Fechar painel"]')
+            app.key('n', ctrl=True)
+            wait(lambda: app.js('return document.querySelector(".window-title").innerText.includes("TXT")'), 'formato padrão TXT')
+            app.editor('editor.commands.setContent({type:"doc",content:[{type:"paragraph",content:[{type:"text",text:"**literal** em UTF-8: 日本語"}]}]});return true')
+            app.key('s', ctrl=True)
+            txt_path = downloads / 'Texto.txt'
+            native_chooser(data_home, txt_path)
+            wait(txt_path.exists, 'salvar TXT')
+            assert txt_path.read_text() == '**literal** em UTF-8: 日本語'
+            passed('formato padrão TXT e salvamento textual real')
+            # Simulação de composição verifica que atalhos não interrompem o IME.
+            before_tabs = app.js('return document.querySelectorAll("[role=tab]").length')
+            app.js('window.dispatchEvent(new KeyboardEvent("keydown",{key:"n",ctrlKey:true,isComposing:true,bubbles:true}))')
+            assert app.js('return document.querySelectorAll("[role=tab]").length') == before_tabs
+            long_text = '<p>' + 'Escrever com calma. 日本語 Grüß Gott. ' * 8000 + '</p>'
+            started = time.monotonic()
+            app.editor('editor.commands.setContent(arguments[0]);return true', long_text)
+            app.editor('editor.chain().focus("end").insertContent(" FIM").run();return true')
+            elapsed = time.monotonic() - started
+            assert app.editor('return editor.getText().endsWith(" FIM")')
+            passed(f'composição preserva atalhos; documento longo ({len(long_text) - 7} caracteres) em {elapsed:.2f}s')
+            app.click('[aria-label="Fechar aplicativo"]')
+            time.sleep(.2)
+            app.stop()
+            (output.parent / 'desktop-results.json').write_text(json.dumps({'passed': len(results), 'checks': results, 'engine': 'Tauri 2 / WebKitGTK', 'platform': 'Ubuntu 26.10 / Wayland'}, ensure_ascii=False, indent=2))
+            print(f'\n{len(results)} verificações desktop passaram.', flush=True)
+        finally:
+            app.stop()
+            process.terminate()
+            try: process.wait(timeout=5)
+            except subprocess.TimeoutExpired: process.kill()
+            log.close()
+
+
+if __name__ == '__main__':
+    main()

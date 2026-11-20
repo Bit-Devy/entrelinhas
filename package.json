@@ -12,7 +12,11 @@
     "package": "tauri build --bundles deb",
     "test": "vitest run",
     "test:watch": "vitest",
-    "check": "tsc -b && vitest run"
+    "check": "tsc -b && vitest run",
+    "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml --lib -j 2",
+    "test:desktop": "python3 scripts/test-desktop.py",
+    "format": "prettier --write src package.json tsconfig.json vite.config.ts src-tauri/tauri.conf.json",
+    "format:check": "prettier --check src package.json tsconfig.json vite.config.ts src-tauri/tauri.conf.json"
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.5",
@@ -47,6 +51,7 @@
     "@types/turndown": "5.0.6",
     "@vitejs/plugin-react": "6.3.0",
     "jsdom": "31.0.1",
+    "prettier": "3.10.1",
     "typescript": "7.0.2",
     "vite": "8.3.8",
     "vitest": "5.1.1"

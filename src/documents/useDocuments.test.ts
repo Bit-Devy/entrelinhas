@@ -8,14 +8,33 @@ import { defaultPreferences } from '../core/preferences'
 import { editorExtensions } from '../editor/extensions'
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: vi.fn(), save: vi.fn() }))
-vi.mock('../native/api', async importOriginal => ({ ...await importOriginal<typeof import('../native/api')>(), backend: { save: vi.fn(), read: vi.fn() } }))
+vi.mock('../native/api', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../native/api')>()),
+  backend: { save: vi.fn(), read: vi.fn() },
+}))
 
 function setup(format: 'md' | 'txt' = 'md') {
   const note = createNote(format)
   const editor = new Editor({ extensions: editorExtensions(false), content: '<p>Olá, mundo.</p>' })
-  const options = { notes: [note], setNotes: vi.fn(), setActiveId: vi.fn(), editors: { current: new Map([[note.id, editor]]) }, preferences: structuredClone(defaultPreferences), documents: [], ask: vi.fn().mockResolvedValue('text'), notify: vi.fn(), refresh: vi.fn().mockResolvedValue(undefined) }
+  const options = {
+    notes: [note],
+    setNotes: vi.fn(),
+    setActiveId: vi.fn(),
+    editors: { current: new Map([[note.id, editor]]) },
+    preferences: structuredClone(defaultPreferences),
+    documents: [],
+    ask: vi.fn().mockResolvedValue('text'),
+    notify: vi.fn(),
+    refresh: vi.fn().mockResolvedValue(undefined),
+  }
   vi.mocked(save).mockResolvedValue('/tmp/Manual.' + format)
-  vi.mocked(backend.save).mockImplementation(async request => ({ path: request.path, title: 'Manual.' + format, content: request.content, version: 'versão', warning: null }))
+  vi.mocked(backend.save).mockImplementation(async (request) => ({
+    path: request.path,
+    title: 'Manual.' + format,
+    content: request.content,
+    version: 'versão',
+    warning: null,
+  }))
   const hook = renderHook(() => useDocuments(options))
   return { note, editor, options, hook }
 }
@@ -25,7 +44,8 @@ beforeEach(() => vi.clearAllMocks())
 it('digitar e desmontar não grava o rascunho nem chama o backend', () => {
   const { editor, hook } = setup()
   editor.commands.insertContent('Rascunho secreto')
-  hook.unmount(); editor.destroy()
+  hook.unmount()
+  editor.destroy()
   expect(backend.save).not.toHaveBeenCalled()
   expect(save).not.toHaveBeenCalled()
   expect(createNote().content.content?.[0].content).toBeUndefined()
@@ -34,31 +54,90 @@ it('digitar e desmontar não grava o rascunho nem chama o backend', () => {
 it('salva somente depois da ação explícita, com o Markdown real', async () => {
   const { note, editor, options, hook } = setup()
   let success = false
-  await act(async () => { success = await hook.result.current.saveNote(note.id) })
+  await act(async () => {
+    success = await hook.result.current.saveNote(note.id)
+  })
   expect(success).toBe(true)
-  expect(backend.save).toHaveBeenCalledWith(expect.objectContaining({ path: '/tmp/Manual.md', content: 'Olá, mundo.\n', expectedVersion: null, overwrite: false }))
+  expect(backend.save).toHaveBeenCalledWith(
+    expect.objectContaining({
+      path: '/tmp/Manual.md',
+      content: 'Olá, mundo.\n',
+      expectedVersion: null,
+      overwrite: false,
+    }),
+  )
   expect(options.setNotes).toHaveBeenCalled()
-  hook.unmount(); editor.destroy()
+  hook.unmount()
+  editor.destroy()
 })
 
 it('pede uma decisão antes de perder formatação em TXT', async () => {
   const { note, editor, options, hook } = setup('txt')
-  editor.commands.selectAll(); editor.commands.toggleBold()
+  editor.commands.selectAll()
+  editor.commands.toggleBold()
   options.ask.mockResolvedValue('cancel')
-  await act(async () => { expect(await hook.result.current.saveNote(note.id)).toBe(false) })
-  expect(options.ask).toHaveBeenCalledWith(expect.objectContaining({ title: 'Salvar como texto simples?' }))
+  await act(async () => {
+    expect(await hook.result.current.saveNote(note.id)).toBe(false)
+  })
+  expect(options.ask).toHaveBeenCalledWith(
+    expect.objectContaining({ title: 'Salvar como texto simples?' }),
+  )
   expect(backend.save).not.toHaveBeenCalled()
   options.ask.mockResolvedValue('text')
-  await act(async () => { expect(await hook.result.current.saveNote(note.id)).toBe(true) })
-  expect(backend.save).toHaveBeenCalledWith(expect.objectContaining({ content: 'Olá, mundo.', assets: [] }))
-  hook.unmount(); editor.destroy()
+  await act(async () => {
+    expect(await hook.result.current.saveNote(note.id)).toBe(true)
+  })
+  expect(backend.save).toHaveBeenCalledWith(
+    expect.objectContaining({ content: 'Olá, mundo.', assets: [] }),
+  )
+  hook.unmount()
+  editor.destroy()
 })
 
 it('não sobrescreve um conflito quando o usuário cancela', async () => {
   const { note, editor, options, hook } = setup()
   vi.mocked(backend.save).mockRejectedValue({ code: 'conflict', message: 'Alteração externa' })
   options.ask.mockResolvedValue('cancel')
-  await act(async () => { expect(await hook.result.current.saveNote(note.id)).toBe(false) })
+  await act(async () => {
+    expect(await hook.result.current.saveNote(note.id)).toBe(false)
+  })
   expect(backend.save).toHaveBeenCalledTimes(1)
-  hook.unmount(); editor.destroy()
+  hook.unmount()
+  editor.destroy()
+})
+
+it('aguarda uma gravação manual em andamento antes de permitir o fechamento', async () => {
+  const { note, editor, hook } = setup()
+  let finish!: (value: Awaited<ReturnType<typeof backend.save>>) => void
+  vi.mocked(backend.save).mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      }),
+  )
+  let writing!: Promise<boolean>
+  act(() => {
+    writing = hook.result.current.saveNote(note.id)
+  })
+  await vi.waitFor(() => expect(backend.save).toHaveBeenCalled())
+  let finished = false
+  const waiting = hook.result.current.waitForSaves().then(() => {
+    finished = true
+  })
+  await Promise.resolve()
+  expect(finished).toBe(false)
+  await act(async () => {
+    finish({
+      path: '/tmp/Manual.md',
+      title: 'Manual.md',
+      content: 'Olá, mundo.',
+      version: 'v1',
+      warning: null,
+    })
+    await writing
+    await waiting
+  })
+  expect(finished).toBe(true)
+  hook.unmount()
+  editor.destroy()
 })

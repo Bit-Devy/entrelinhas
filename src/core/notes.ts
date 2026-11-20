@@ -2,11 +2,21 @@ import type { JSONContent } from '@tiptap/core'
 import type { DocumentFormat, Note } from './types'
 
 export function createNote(format: DocumentFormat = 'md', projectId: string | null = null): Note {
-  return { id: crypto.randomUUID(), title: 'Sem título', path: null, format, content: { type: 'doc', content: [{ type: 'paragraph' }] }, dirty: false, version: null, projectId, savedContent: '' }
+  return {
+    id: crypto.randomUUID(),
+    title: 'Sem título',
+    path: null,
+    format,
+    content: { type: 'doc', content: [{ type: 'paragraph' }] },
+    dirty: false,
+    version: null,
+    projectId,
+    savedContent: '',
+  }
 }
 
 export function updateNote(notes: Note[], id: string, change: Partial<Note>): Note[] {
-  return notes.map(note => note.id === id ? { ...note, ...change } : note)
+  return notes.map((note) => (note.id === id ? { ...note, ...change } : note))
 }
 
 export function moveItem<T>(items: T[], from: number, to: number): T[] {
@@ -21,16 +31,32 @@ export function textFromDocument(node: JSONContent): string {
   if (node.type === 'hardBreak') return '\n'
   if (node.type === 'image') return node.attrs?.alt ?? ''
   const children = node.content ?? []
-  return children.map((child, index) => textFromDocument(child) + (index < children.length - 1 && !['text', 'hardBreak', 'image'].includes(child.type ?? '') ? '\n' : '')).join('')
+  return children
+    .map(
+      (child, index) =>
+        textFromDocument(child) +
+        (index < children.length - 1 && !['text', 'hardBreak', 'image'].includes(child.type ?? '')
+          ? '\n'
+          : ''),
+    )
+    .join('')
 }
 
 export function hasFormatting(node: JSONContent): boolean {
-  if (node.marks?.length || Object.values(node.attrs ?? {}).some(value => value !== null && value !== undefined)) return true
+  if (
+    node.marks?.length ||
+    Object.values(node.attrs ?? {}).some((value) => value !== null && value !== undefined)
+  )
+    return true
   if (!['doc', 'paragraph', 'text', 'hardBreak'].includes(node.type ?? '')) return true
   return (node.content ?? []).some(hasFormatting)
 }
 
 export function countText(text: string): { words: number; characters: number } {
   const segments = new Intl.Segmenter('pt', { granularity: 'word' }).segment(text)
-  return { words: [...segments].filter(segment => segment.isWordLike).length, characters: [...text].length }
+  let words = 0,
+    characters = 0
+  for (const segment of segments) if (segment.isWordLike) words++
+  for (const _character of text) characters++
+  return { words, characters }
 }

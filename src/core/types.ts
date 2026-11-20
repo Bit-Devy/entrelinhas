@@ -2,7 +2,8 @@ import type { JSONContent } from '@tiptap/core'
 
 export type DocumentFormat = 'md' | 'txt'
 export type Theme = 'light' | 'dark' | 'sepia'
-export type ShortcutAction = 'new' | 'open' | 'save' | 'saveAs' | 'close' | 'find' | 'replace' | 'immersive'
+export type ShortcutAction =
+  'new' | 'open' | 'save' | 'saveAs' | 'close' | 'find' | 'replace' | 'immersive'
 
 export interface Preferences {
   theme: Theme
@@ -36,11 +37,54 @@ export interface Note {
   savedContent: string
 }
 
-export interface Project { id: string; name: string; color: string; icon: string; position: number }
-export interface RegisteredDocument { path: string; title: string; projectId: string | null; updatedAt: number }
-export interface Library { projects: Project[]; documents: RegisteredDocument[]; preferences: Partial<Preferences> }
-export interface ReadResult { path: string; title: string; content: string; version: string; format: DocumentFormat }
-export interface ImageAsset { token: string; dataUrl: string }
-export interface SaveRequest { path: string; content: string; expectedVersion: string | null; overwrite: boolean; projectId: string | null; assets: ImageAsset[] }
-export interface SaveResult { path: string; title: string; content: string; version: string; warning: string | null }
-export interface SearchResult { path: string; title: string; excerpt: string; missing: boolean; error: string | null }
+export interface Project {
+  id: string
+  name: string
+  color: string
+  icon: string
+  position: number
+}
+export interface RegisteredDocument {
+  path: string
+  title: string
+  projectId: string | null
+  updatedAt: number
+}
+export interface Library {
+  projects: Project[]
+  documents: RegisteredDocument[]
+  preferences: Partial<Preferences>
+}
+export interface ReadResult {
+  path: string
+  title: string
+  content: string
+  version: string
+  format: DocumentFormat
+}
+export interface ImageAsset {
+  token: string
+  dataUrl: string
+}
+export interface SaveRequest {
+  path: string
+  content: string
+  expectedVersion: string | null
+  overwrite: boolean
+  projectId: string | null
+  assets: ImageAsset[]
+}
+export interface SaveResult {
+  path: string
+  title: string
+  content: string
+  version: string
+  warning: string | null
+}
+export interface SearchResult {
+  path: string
+  title: string
+  excerpt: string
+  missing: boolean
+  error: string | null
+}

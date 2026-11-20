@@ -7,19 +7,42 @@ import { gfm } from 'turndown-plugin-gfm'
 import { editorExtensions } from './extensions'
 import type { ImageAsset } from '../core/types'
 
-const converter = new TurndownService({ headingStyle: 'atx', codeBlockStyle: 'fenced', bulletListMarker: '-', emDelimiter: '*', strongDelimiter: '**' })
+const converter = new TurndownService({
+  headingStyle: 'atx',
+  codeBlockStyle: 'fenced',
+  bulletListMarker: '-',
+  emDelimiter: '*',
+  strongDelimiter: '**',
+})
 converter.use(gfm)
 // HTML é parte do Markdown. Assim, cores, tamanhos e alinhamento continuam reversíveis.
-converter.addRule('rich-inline', { filter: ['span', 'u', 'mark'], replacement: (_content, node) => (node as HTMLElement).outerHTML })
+converter.addRule('rich-inline', {
+  filter: ['span', 'u', 'mark'],
+  replacement: (_content, node) => (node as HTMLElement).outerHTML,
+})
 converter.addRule('rich-block', {
-  filter: node => ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TABLE', 'UL', 'OL', 'LI', 'BLOCKQUOTE'].includes(node.nodeName) && ((node as HTMLElement).hasAttribute('style') || node.nodeName === 'TABLE' || (node as HTMLElement).getAttribute('data-type') === 'taskList'),
+  filter: (node) =>
+    ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'TABLE', 'UL', 'OL', 'LI', 'BLOCKQUOTE'].includes(
+      node.nodeName,
+    ) &&
+    ((node as HTMLElement).hasAttribute('style') ||
+      node.nodeName === 'TABLE' ||
+      (node as HTMLElement).getAttribute('data-type') === 'taskList'),
   replacement: (_content, node) => `\n\n${(node as HTMLElement).outerHTML}\n\n`,
 })
-converter.addRule('sized-image', { filter: node => node.nodeName === 'IMG' && ((node as HTMLElement).hasAttribute('width') || (node as HTMLElement).hasAttribute('height')), replacement: (_content, node) => (node as HTMLElement).outerHTML })
+converter.addRule('sized-image', {
+  filter: (node) =>
+    node.nodeName === 'IMG' &&
+    ((node as HTMLElement).hasAttribute('width') || (node as HTMLElement).hasAttribute('height')),
+  replacement: (_content, node) => (node as HTMLElement).outerHTML,
+})
 
 export function markdownToHtml(markdown: string): string {
   const html = marked.parse(markdown, { async: false, gfm: true, breaks: false }) as string
-  const clean = DOMPurify.sanitize(html, { ADD_ATTR: ['data-type', 'data-checked'], FORBID_TAGS: ['style', 'script', 'iframe', 'object', 'form', 'button'] })
+  const clean = DOMPurify.sanitize(html, {
+    ADD_ATTR: ['data-type', 'data-checked'],
+    FORBID_TAGS: ['style', 'script', 'iframe', 'object', 'form', 'button'],
+  })
   const container = document.createElement('div')
   container.innerHTML = clean
   // O GFM usa inputs; o TipTap identifica tarefas pelos atributos data-type.
@@ -30,7 +53,8 @@ export function markdownToHtml(markdown: string): string {
     item.parentElement!.dataset.type = 'taskList'
     checkbox.remove()
     const paragraph = document.createElement('p')
-    while (item.firstChild && item.firstChild.nodeName !== 'UL') paragraph.appendChild(item.firstChild)
+    while (item.firstChild && item.firstChild.nodeName !== 'UL')
+      paragraph.appendChild(item.firstChild)
     item.prepend(paragraph)
   }
   for (const image of container.querySelectorAll('img')) {
@@ -40,8 +64,24 @@ export function markdownToHtml(markdown: string): string {
 }
 
 export function parseDocument(content: string, format: 'md' | 'txt'): JSONContent {
-  const editor = new Editor({ extensions: editorExtensions(false), content: format === 'md' ? markdownToHtml(content) : { type: 'doc', content: content.split(/\r?\n/).map(line => ({ type: 'paragraph', ...(line ? { content: [{ type: 'text', text: line }] } : {}) })) } })
-  try { return editor.getJSON() } finally { editor.destroy() }
+  const editor = new Editor({
+    extensions: editorExtensions(false),
+    content:
+      format === 'md'
+        ? markdownToHtml(content)
+        : {
+            type: 'doc',
+            content: content.split(/\r?\n/).map((line) => ({
+              type: 'paragraph',
+              ...(line ? { content: [{ type: 'text', text: line }] } : {}),
+            })),
+          },
+  })
+  try {
+    return editor.getJSON()
+  } finally {
+    editor.destroy()
+  }
 }
 
 export function serializeHtml(html: string): { content: string; assets: ImageAsset[] } {
@@ -62,5 +102,9 @@ export function serializeHtml(html: string): { content: string; assets: ImageAss
 
 export function documentHtml(content: JSONContent): string {
   const editor = new Editor({ extensions: editorExtensions(false), content })
-  try { return editor.getHTML() } finally { editor.destroy() }
+  try {
+    return editor.getHTML()
+  } finally {
+    editor.destroy()
+  }
 }

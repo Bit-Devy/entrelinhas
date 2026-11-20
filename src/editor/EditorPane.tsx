@@ -6,9 +6,12 @@ import { editorExtensions } from './extensions'
 import { Caret } from './Caret'
 
 interface Props {
-  note: Note; active: boolean; preferences: Preferences
+  note: Note
+  active: boolean
+  preferences: Preferences
   onReady: (id: string, editor: Editor | null) => void
-  onChange: (id: string) => void; onTyping: () => void
+  onChange: (id: string) => void
+  onTyping: () => void
   onImages: (files: File[], editor: Editor) => void
   onStats: (text: string) => void
   onSelection: (rect: DOMRect | null) => void
@@ -19,22 +22,40 @@ export function EditorPane(props: Props) {
   current.current = props
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const editor = useEditor({
-    extensions: editorExtensions(), content: props.note.content, shouldRerenderOnTransaction: false,
+    extensions: editorExtensions(),
+    content: props.note.content,
+    shouldRerenderOnTransaction: false,
     editorProps: {
-      attributes: { role: 'textbox', 'aria-label': 'Área de escrita', 'aria-multiline': 'true', lang: 'pt-BR' },
+      attributes: {
+        role: 'textbox',
+        'aria-label': 'Área de escrita',
+        'aria-multiline': 'true',
+        lang: 'pt-BR',
+      },
       handleDOMEvents: {
-        beforeinput: () => { current.current.onTyping(); return false },
-        compositionstart: () => { current.current.onTyping(); return false },
+        beforeinput: () => {
+          current.current.onTyping()
+          return false
+        },
+        compositionstart: () => {
+          current.current.onTyping()
+          return false
+        },
       },
       handlePaste: (view, event) => {
-        const files = [...(event.clipboardData?.files ?? [])].filter(file => file.type.startsWith('image/'))
+        const files = [...(event.clipboardData?.files ?? [])].filter((file) =>
+          file.type.startsWith('image/'),
+        )
         if (!files.length) return false
         event.preventDefault()
-        if (current.current.active && view.editable) current.current.onImages(files, currentEditor()!)
+        if (current.current.active && view.editable)
+          current.current.onImages(files, currentEditor()!)
         return true
       },
       handleDrop: (_view, event) => {
-        const files = [...(event.dataTransfer?.files ?? [])].filter(file => file.type.startsWith('image/'))
+        const files = [...(event.dataTransfer?.files ?? [])].filter((file) =>
+          file.type.startsWith('image/'),
+        )
         if (!files.length) return false
         event.preventDefault()
         const target = currentEditor()!
@@ -51,16 +72,25 @@ export function EditorPane(props: Props) {
     },
     onSelectionUpdate: ({ editor: updated }) => {
       const selection = window.getSelection()
-      current.current.onSelection(!updated.state.selection.empty && selection?.rangeCount ? selection.getRangeAt(0).getBoundingClientRect() : null)
+      current.current.onSelection(
+        !updated.state.selection.empty && selection?.rangeCount
+          ? selection.getRangeAt(0).getBoundingClientRect()
+          : null,
+      )
     },
   })
   const editorRef = useRef<Editor | null>(null)
   editorRef.current = editor
-  function currentEditor() { return editorRef.current }
+  function currentEditor() {
+    return editorRef.current
+  }
   useEffect(() => {
     if (!editor) return
     props.onReady(props.note.id, editor)
-    return () => { props.onReady(props.note.id, null); if (timer.current) clearTimeout(timer.current) }
+    return () => {
+      props.onReady(props.note.id, null)
+      if (timer.current) clearTimeout(timer.current)
+    }
   }, [editor, props.note.id, props.onReady])
   useEffect(() => {
     if (props.active && editor) {
@@ -68,9 +98,20 @@ export function EditorPane(props: Props) {
       props.onStats(editor.getText())
     }
   }, [props.active, editor]) // O conteúdo e o histórico continuam vivos ao trocar de aba.
-  useEffect(() => { editor?.view.dom.setAttribute('spellcheck', String(props.preferences.spellcheck)) }, [editor, props.preferences.spellcheck])
-  return <div className={`editor-scroll ${props.active ? '' : 'inactive'}`} data-cursor={props.preferences.cursor}>
-    <div className="writing-paper"><EditorContent editor={editor} /></div>
-    {editor && props.active && <Caret editor={editor} enabled={props.preferences.cursor === 'block'} />}
-  </div>
+  useEffect(() => {
+    editor?.view.dom.setAttribute('spellcheck', String(props.preferences.spellcheck))
+  }, [editor, props.preferences.spellcheck])
+  return (
+    <div
+      className={`editor-scroll ${props.active ? '' : 'inactive'}`}
+      data-cursor={props.preferences.cursor}
+    >
+      <div className="writing-paper">
+        <EditorContent editor={editor} />
+      </div>
+      {editor && props.active && (
+        <Caret editor={editor} enabled={props.preferences.cursor === 'block'} />
+      )}
+    </div>
+  )
 }
