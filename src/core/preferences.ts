@@ -2,6 +2,7 @@ import type { Preferences } from './types'
 
 export const defaultPreferences: Preferences = {
   theme: 'light',
+  themeChosen: false,
   cursor: 'block',
   autoImmersive: true,
   askBeforeDiscard: false,
@@ -34,6 +35,8 @@ export function readPreferences(value: unknown): Preferences {
   const result = structuredClone(defaultPreferences)
   if (!value || typeof value !== 'object') return result
   const input = value as Record<string, unknown>
+  // Uma instalação anterior já pode ter escolhido seu tema antes desta opção existir.
+  result.themeChosen = ['light', 'dark', 'sepia'].includes(input.theme as string)
   const choices = {
     theme: ['light', 'dark', 'sepia'],
     cursor: ['block', 'thin', 'hidden'],
@@ -58,6 +61,7 @@ export function readPreferences(value: unknown): Preferences {
       Object.assign(result, { [key]: Math.min(max, Math.max(min, n)) })
   }
   for (const key of [
+    'themeChosen',
     'autoImmersive',
     'askBeforeDiscard',
     'sidebarVisible',

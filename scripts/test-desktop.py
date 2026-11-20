@@ -56,7 +56,7 @@ class Desktop:
                     raise
                 time.sleep(.1)
 
-    def start(self):
+    def start(self, choose_theme=True):
         result = self.request('/session', {'capabilities': {'alwaysMatch': {'tauri:options': {'application': str(self.application)}}}})
         self.session = result['sessionId']
         self.call('/timeouts', {'implicit': 3000})
@@ -64,6 +64,12 @@ class Desktop:
         library = wait(lambda: self.ipc('load_library'), 'SQLite')
         stored_theme = library['preferences'].get('theme', 'light')
         wait(lambda: self.js('return document.documentElement.dataset.theme') == stored_theme, 'aplicar preferências carregadas')
+        needs_choice = not library['preferences'].get('themeChosen', stored_theme in ('light', 'dark', 'sepia') and 'theme' in library['preferences'])
+        if needs_choice:
+            wait(lambda: self.js('return !!document.querySelector(".welcome-modal")'), 'pergunta inicial de tema')
+            if choose_theme:
+                self.click('[aria-label="Usar tema Claro"]')
+                wait(lambda: self.ipc('load_library')['preferences'].get('themeChosen'), 'guardar escolha de tema')
 
     def call(self, path, value=None, method=None):
         return self.request('/session/' + self.session + path, value, method)
@@ -174,12 +180,35 @@ def main():
             print('OK · ' + name, flush=True)
         try:
             wait(lambda: urllib.request.urlopen(f'http://127.0.0.1:{port}/status', timeout=1).status == 200, 'WebDriver')
+            app.start(choose_theme=False)
+            assert app.js('return document.querySelectorAll(".welcome-modal .theme-choice").length') == 3
+            assert not app.ipc('load_library')['preferences'], 'O tema padrão não deve ser persistido antes da escolha.'
+            app.screenshot(output / 'welcome.png')
+            app.click('[aria-label="Usar tema Sépia Noturno"]')
+            wait(lambda: app.ipc('load_library')['preferences'].get('themeChosen'), 'persistir escolha inicial')
+            passed('primeira abertura pergunta o tema antes de persistir preferências')
+            app.click('[aria-label="Fechar aplicativo"]')
+            time.sleep(.3)
+            app.stop()
             app.start()
+            assert not app.js('return !!document.querySelector(".welcome-modal")')
+            assert app.js('return document.documentElement.dataset.theme') == 'sepia'
+            passed('tema inicial lembrado sem repetir a apresentação')
             assert app.editor('return editor.getText()') == ''
             assert app.js('return document.title') == 'Entrelinhas'
             assert app.js('return document.querySelector(".brand").children.length') == 1
             assert app.js('return document.querySelectorAll("[role=tab]").length') == 1
             passed('inicialização em nota vazia')
+            original_rect = app.call('/window/rect')
+            for width in (720, 1500):
+                app.call('/window/rect', {'width': width, 'height': 780})
+                wait(lambda: app.js('return innerWidth') == width, 'redimensionar janela')
+                wait(lambda: app.js('const r=document.querySelector(".tiptap").getBoundingClientRect();return Math.abs(r.left+r.width/2-innerWidth/2)<1'), 'centralizar após redimensionamento')
+            app.call('/window/rect', original_rect)
+            wait(lambda: app.js('return innerWidth') == original_rect['width'], 'restaurar tamanho da janela')
+            wait(lambda: app.js('const r=document.querySelector(".tiptap").getBoundingClientRect();return Math.abs(r.left+r.width/2-innerWidth/2)<1'), 'estabilizar coluna após restauração')
+            app.call('/execute/async', {'script':'const done=arguments[arguments.length-1];requestAnimationFrame(()=>requestAnimationFrame(()=>done(true)));','args':[]})
+            passed('coluna centralizada em janelas estreitas e largas')
             before = app.js('return document.querySelector(".tiptap").getBoundingClientRect().toJSON()')
             secret = 'Há um espaço de silêncio entre uma ideia e outra. 日本語'
             app.keys('.tiptap', secret)
@@ -190,6 +219,8 @@ def main():
             wait(lambda: app.js('return getComputedStyle(document.querySelector(".titlebar")).visibility==="hidden"'), 'ocultar controles')
             assert app.js('return !!document.querySelector(".block-caret")')
             app.screenshot(output / 'imersivo.png')
+            app.editor('editor.commands.insertContent("k".repeat(1000));return true')
+            assert app.js('const scroll=document.querySelector(".editor-scroll:not(.inactive)");return scroll.scrollWidth<=scroll.clientWidth+1'), 'Linhas longas não devem escapar da coluna.'
             app.reveal()
             passed('imersão, cursor em bloco, posição estável e Esc')
             app.click('[aria-label="Fechar aplicativo"]')

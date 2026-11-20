@@ -70,3 +70,15 @@ describe('preferências e atalhos', () => {
     ).toBe('immersive')
   })
 })
+
+describe('primeira escolha de tema', () => {
+  it('não conclui a apresentação sem uma escolha explícita', () => {
+    expect(readPreferences({}).themeChosen).toBe(false)
+  })
+  it.each(['light', 'dark', 'sepia'])('preserva o tema %s de instalações anteriores', (theme) => {
+    expect(readPreferences({ theme })).toMatchObject({ theme, themeChosen: true })
+  })
+  it('respeita uma apresentação ainda não concluída', () => {
+    expect(readPreferences({ theme: 'dark', themeChosen: false }).themeChosen).toBe(false)
+  })
+})

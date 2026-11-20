@@ -7,6 +7,7 @@ export type ShortcutAction =
 
 export interface Preferences {
   theme: Theme
+  themeChosen: boolean
   cursor: 'block' | 'thin' | 'hidden'
   autoImmersive: boolean
   askBeforeDiscard: boolean

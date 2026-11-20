@@ -19,11 +19,15 @@ export function Modal({
   children,
   onClose,
   wide = false,
+  dismissible = true,
+  className = '',
 }: {
   title: string
   children: ReactNode
   onClose: () => void
   wide?: boolean
+  dismissible?: boolean
+  className?: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const closeRef = useRef(onClose)
@@ -39,7 +43,8 @@ export function Modal({
     const handle = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.stopPropagation()
-        closeRef.current()
+        event.preventDefault()
+        if (dismissible) closeRef.current()
       }
       if (event.key !== 'Tab') return
       const elements = [
@@ -68,21 +73,23 @@ export function Modal({
     <div
       className="modal-backdrop"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose()
+        if (dismissible && event.target === event.currentTarget) onClose()
       }}
     >
       <div
         ref={ref}
-        className={`modal ${wide ? 'wide' : ''}`}
+        className={`modal ${wide ? 'wide' : ''} ${className}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}
       >
         <header className="modal-header">
           <h2>{title}</h2>
-          <IconButton label="Fechar painel" onClick={onClose}>
-            <X size={18} />
-          </IconButton>
+          {dismissible && (
+            <IconButton label="Fechar painel" onClick={onClose}>
+              <X size={18} />
+            </IconButton>
+          )}
         </header>
         {children}
       </div>

@@ -36,6 +36,7 @@ import { WindowResize } from './native/WindowResize'
 import { Sidebar } from './components/Sidebar'
 import { LibrarySearch } from './components/LibrarySearch'
 import { FindBar } from './components/FindBar'
+import { WelcomeTheme } from './components/WelcomeTheme'
 import { Settings } from './components/Settings'
 import { IconButton, Modal } from './components/ui'
 
@@ -179,7 +180,7 @@ export default function App() {
     }
   }, [notify])
   useEffect(() => {
-    if (!preferencesLoaded) return
+    if (!preferencesLoaded || !preferences.themeChosen) return
     preferencesQueue.current = preferencesQueue.current
       .catch(() => {})
       .then(() => backend.preferences(preferences))
@@ -286,6 +287,7 @@ export default function App() {
   )
   const onTyping = useCallback(() => {
     if (
+      preferences.themeChosen &&
       preferences.autoImmersive &&
       !settings &&
       !find &&
@@ -297,7 +299,15 @@ export default function App() {
       setMenu(false)
       setSelectionRect(null)
     }
-  }, [preferences.autoImmersive, settings, find, link, dialog.visible, librarySearch])
+  }, [
+    preferences.themeChosen,
+    preferences.autoImmersive,
+    settings,
+    find,
+    link,
+    dialog.visible,
+    librarySearch,
+  ])
   useEffect(() => {
     document.documentElement.dataset.theme = preferences.theme
     document.documentElement.style.colorScheme = preferences.theme === 'light' ? 'light' : 'dark'
@@ -325,6 +335,7 @@ export default function App() {
         return
       }
       if (
+        !preferences.themeChosen ||
         settings ||
         dialog.visible ||
         librarySearch ||
@@ -770,6 +781,14 @@ export default function App() {
           )}
         </div>
       </section>
+      {preferencesLoaded && !preferences.themeChosen && (
+        <WelcomeTheme
+          onChoose={(theme) => {
+            setPreferences((current) => ({ ...current, theme, themeChosen: true }))
+            requestAnimationFrame(() => editors.current.get(activeId)?.commands.focus())
+          }}
+        />
+      )}
       {librarySearch && (
         <LibrarySearch onClose={() => setLibrarySearch(false)} onOpen={fileOps.openPath} />
       )}

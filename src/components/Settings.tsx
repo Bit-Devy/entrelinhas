@@ -1,8 +1,5 @@
 import { useState } from 'react'
 import {
-  Sun,
-  Moon,
-  Coffee,
   Paintbrush,
   Type,
   MousePointer2,
@@ -11,6 +8,7 @@ import {
   SlidersHorizontal,
   Info,
 } from 'lucide-react'
+import { ThemeChoices } from './ThemeChoices'
 import { AppIcon } from './AppIcon'
 import { Modal } from './ui'
 import { eventShortcut } from '../core/shortcuts'
@@ -75,31 +73,10 @@ export function Settings({
             <>
               <h3>Seu espaço, sua luz.</h3>
               <p className="muted">Escolha a atmosfera que acompanha sua escrita.</p>
-              <div className="theme-options">
-                {[
-                  { id: 'light', label: 'Claro', icon: Sun },
-                  { id: 'dark', label: 'Escuro', icon: Moon },
-                  { id: 'sepia', label: 'Sépia Noturno', icon: Coffee },
-                ].map((theme) => (
-                  <button
-                    key={theme.id}
-                    className={`theme-choice ${p.theme === theme.id ? 'selected' : ''}`}
-                    aria-pressed={p.theme === theme.id}
-                    onClick={() => onChange({ theme: theme.id as Preferences['theme'] })}
-                  >
-                    <span className={`theme-preview ${theme.id}`}>
-                      <i />
-                      <i />
-                      <i />
-                      <b />
-                    </span>
-                    <span>
-                      <theme.icon size={14} />
-                      {theme.label}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              <ThemeChoices
+                value={p.theme}
+                onChange={(theme) => onChange({ theme, themeChosen: true })}
+              />
               <h4>Layout</h4>
               <label className="setting-row">
                 <span>Posição da navegação</span>
