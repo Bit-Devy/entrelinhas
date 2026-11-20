@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Entre Linhas
+Comment=Um espaço tranquilo para escrever
+Exec=entrelinhas
+Icon=entrelinhas
+Terminal=false
+Categories=Office;TextEditor;
+Keywords=texto;notas;markdown;escrita;
+StartupWMClass=entrelinhas
+StartupNotify=true

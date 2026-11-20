@@ -1,0 +1,8 @@
+:root { font-family: 'Ubuntu', 'Cantarell', sans-serif; color: #242424; background: #f7f7f5; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+.initial-shell { height: 100vh; display: flex; flex-direction: column; padding: 24px; }
+.initial-shell header { display: flex; justify-content: space-between; color: #777; }
+.initial-shell strong { color: #242424; }
+.initial-shell textarea { flex: 1; margin: 70px auto; width: min(720px, 90%); border: 0; outline: 0; resize: none; background: transparent; font: 20px/1.8 'Noto Serif', serif; color: inherit; }
+.initial-shell footer { color: #777; font-size: 12px; }
