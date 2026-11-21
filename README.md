@@ -8,15 +8,16 @@ Entrelinhas é um editor **desktop de verdade**, feito com Tauri 2, React e Type
 
 ## Suas palavras, no seu tempo
 
-- Inicialização sempre em uma nota nova, vazia e mantida em memória. Escrita sem o cabeçalho decorativo, começando mais acima.
+- Inicialização normal em uma nota nova, vazia e mantida em memória. Ao abrir pelo explorador, recebe os documentos solicitados. Escrita sem o cabeçalho decorativo, começando mais acima.
 - Tamanho e maximização da janela lembrados ao reabrir. Duplo clique na área livre da barra maximiza ou restaura.
 - Duplo clique no título abre a edição do nome: rascunhos ganham um nome sugerido; arquivos salvos são renomeados na mesma pasta, sem salvar as alterações do editor nem substituir outro arquivo.
 - **Nenhum salvamento automático, recuperação de rascunhos ou restauração de abas.**
 - Salvamento manual em arquivos Markdown e TXT comuns, em qualquer pasta. Abertura e salvamento pelo explorador do desktop via XDG Desktop Portal; no GNOME, utiliza o Nautilus. Os diálogos começam na pasta Documentos configurada no sistema; Salvar como mantém o caminho do arquivo aberto.
+- Integração com **Abrir com** para `.md`, `.markdown` e `.txt`. Novos pedidos chegam à janela já aberta, preservam rascunhos e ativam documentos existentes sem duplicar guias.
 - Projetos lógicos com nome, cor, ícone opcional e referências a documentos externos.
 - Guias ocultas com uma única nota; botão **Nova guia** e **Ctrl+T** revelam a faixa ao abrir a segunda. Guias reordenáveis, com conteúdo, seleção e histórico preservados ao alternar.
 - Interface imersiva automática, alternância manual, acesso por Esc e aproximação das bordas.
-- Três temas: Claro, Escuro e Sépia Noturno, com escolha na primeira abertura e respeito às preferências de instalações anteriores.
+- Apresentação inicial em três páginas: boas-vindas, tema e aplicativo padrão opcional. Temas Claro, Escuro e Sépia Noturno, com prévia imediata e respeito às preferências de instalações anteriores.
 - Coluna de escrita centralizada na janela inteira, com limite de largura e posição estável ao esconder os controles.
 - Seletores próprios para projeto, cor, fonte, formato, layout e formatação, acompanhando os três temas. Painéis preservam o fundo desfocado.
 - Formatação na parte inferior, com botões sem moldura, e dicas temáticas com nomes e atalhos ao passar o mouse ou navegar pelo teclado.
@@ -63,7 +64,7 @@ As capturas abaixo são da janela Tauri real, executada no Ubuntu 26.10 com Wayl
 | ------------------------------------ | ------------------------------------ | -------------------------------------------- |
 | ![Claro](docs/screenshots/light.png) | ![Escuro](docs/screenshots/dark.png) | ![Sépia Noturno](docs/screenshots/sepia.png) |
 
-[Ver o modo imersivo](docs/screenshots/imersivo.png) · [Escolha inicial de tema](docs/screenshots/welcome.png) · [Seletor de cores no Sépia Noturno](docs/screenshots/color-sepia.png) · [Seleção de projeto](docs/screenshots/project-picker.png) · [Menus temáticos](docs/screenshots/select-sepia.png) · [Formatação inferior](docs/screenshots/formatting-bottom.png) · [Dicas de botões](docs/screenshots/tooltip-sepia.png) · [Edição do título](docs/screenshots/rename-title.png) · [Busca com mais espaço](docs/screenshots/search-spacing.png) · [Página inicial sem cabeçalho](docs/screenshots/blank.png).
+[Ver o modo imersivo](docs/screenshots/imersivo.png) · [Boas-vindas](docs/screenshots/welcome.png) · [Escolha inicial de tema](docs/screenshots/welcome-theme.png) · [Escolha de aplicativo padrão](docs/screenshots/welcome-default.png) · [Padrão nas configurações](docs/screenshots/default-app.png) · [Seletor de cores no Sépia Noturno](docs/screenshots/color-sepia.png) · [Seleção de projeto](docs/screenshots/project-picker.png) · [Menus temáticos](docs/screenshots/select-sepia.png) · [Formatação inferior](docs/screenshots/formatting-bottom.png) · [Dicas de botões](docs/screenshots/tooltip-sepia.png) · [Edição do título](docs/screenshots/rename-title.png) · [Busca com mais espaço](docs/screenshots/search-spacing.png) · [Página inicial sem cabeçalho](docs/screenshots/blank.png).
 
 Os menus de seleção e as dicas usam as cores do tema do aplicativo. Os seletores de opções permitem navegar com setas, Home/End, digitar o início do nome e confirmar com Enter; Esc cancela a seleção sem fechar as configurações. Os diálogos do sistema para abrir e salvar arquivos acompanham o modo claro ou escuro; Sépia Noturno usa a variante escura do GTK.
 
@@ -75,12 +76,12 @@ O projeto foi compilado e verificado no **Ubuntu 26.10, x86_64, GNOME/Wayland**.
 
 ### Pacote Debian
 
-[Baixe o instalador e os checksums da versão 1.0.0](https://github.com/Bit-Devy/entrelinhas/releases/tag/v1.0.0).
+[Baixe o instalador e os checksums da versão 1.1.0](https://github.com/Davi-Mascarenhas/entrelinhas/releases/tag/v1.1.0).
 
 Para instalar um pacote compilado localmente:
 
 ```bash
-sudo apt install ./src-tauri/target/release/bundle/deb/Entrelinhas_1.0.0_amd64.deb
+sudo apt install ./src-tauri/target/release/bundle/deb/Entrelinhas_1.1.0_amd64.deb
 ```
 
 O aplicativo aparece no menu como **Entrelinhas**, com ícone próprio. O pacote depende do WebKitGTK 4.1 e GTK 3 do sistema. Uma compilação feita no Ubuntu 26.10 não garante compatibilidade binária com versões anteriores do Ubuntu; para elas, compile no sistema de destino.
@@ -94,6 +95,14 @@ bash scripts/install-local.sh
 ```
 
 Essa opção copia o executável para `~/.local/share/entrelinhas/bin/entrelinhas` e registra ícone e atalho em `~/.local/share/applications/entrelinhas.desktop`. Respeita `XDG_DATA_HOME` quando definido. É uma alternativa ao `.deb`; escolha um dos métodos para evitar entradas duplicadas no menu.
+
+Os dois métodos registram os tipos de arquivo para que o Entrelinhas apareça em **Abrir com**. A instalação preserva suas associações atuais. Para escolher o Entrelinhas como padrão, use a última página da apresentação ou **Configurações → Arquivos → Aplicativo padrão → Usar como padrão**. **Agora não** permite continuar sem alterar os padrões. A apresentação aparece em perfis novos; quem já escolheu um tema mantém suas preferências e encontra a mesma opção nas configurações.
+
+Também é possível passar um ou mais caminhos ao executável, inclusive com espaços ou caracteres internacionais:
+
+```bash
+~/.local/share/entrelinhas/bin/entrelinhas "/caminho/Minhas ideias.md" "/caminho/Anotações.txt"
+```
 
 ## Desenvolvimento
 
@@ -160,9 +169,9 @@ python3 scripts/test-desktop.py --binary src-tauri/target/release/entrelinhas
 
 ### Verificações realizadas
 
-- **72 testes TypeScript:** notas, abas, descarte, preferências, atalhos, Markdown, formatação, TXT, Unicode, busca, imagens, gravação explícita, conflitos, espera de gravações, centralização com diferentes painéis, seletores próprios por mouse e teclado, dicas, guias sob demanda, abertura sem perder texto, primeira escolha de tema, edição de títulos e nome sugerido ao salvar.
-- **9 testes Rust:** gravação atômica, conflitos, UTF-8, nomes internacionais, imagens relativas, arquivos somente leitura, recursos inválidos, projetos em Downloads, exclusão sem apagar documentos, localização, busca, renomeação sem sobrescrever, preservação de imagens e projeto e reversão em caso de falha no registro.
-- **28 verificações desktop:** inicialização, ocultação sem deslocamento, Esc, descarte após reiniciar, Ctrl+S com seletor GNOME, associação externa, abas, busca/substituição, colagem de imagens, temas, cursores, persistência, layout, F11, conflitos, busca global, confirmação opcional, TXT, paleta de cores nos três temas, primeira abertura, centralização ao redimensionar, formatação inferior sem moldura, menus de tabela, dicas nos três temas, tamanho da janela após reiniciar, duplo clique na barra, títulos, espaçamento dos campos e abertura/salvamento pelo Nautilus.
+- **79 testes TypeScript:** notas, abas, descarte, preferências, atalhos, Markdown, formatação, TXT, Unicode, busca, imagens, gravação explícita, conflitos, espera de gravações, centralização com diferentes painéis, seletores próprios por mouse e teclado, dicas, guias sob demanda, abertura sem perder texto, apresentação em três páginas, recusa do padrão, tratamento de falhas de associação, migração de preferências, fila de arquivos externos, edição de títulos e nome sugerido ao salvar.
+- **14 testes Rust:** gravação atômica, conflitos, UTF-8, nomes internacionais, imagens relativas, arquivos somente leitura, recursos inválidos, projetos em Downloads, exclusão sem apagar documentos, localização, busca, renomeação sem sobrescrever, preservação de imagens e projeto, reversão em caso de falha no registro, argumentos do explorador e associações MIME em perfis isolados para as instalações local e Debian.
+- **35 verificações desktop:** inicialização, ocultação sem deslocamento, Esc, descarte após reiniciar, Ctrl+S com seletor GNOME, associação externa, abas, busca/substituição, colagem de imagens, temas, cursores, persistência, layout, F11, conflitos, busca global, confirmação opcional, TXT, paleta de cores nos três temas, primeira abertura, centralização ao redimensionar, formatação inferior sem moldura, menus de tabela, dicas nos três temas, tamanho da janela após reiniciar, duplo clique na barra, títulos, espaçamento dos campos, abertura/salvamento pelo Nautilus, registro em Abrir com, abertura pelo sistema com a janela aberta ou fechada, aceitação e recusa do padrão e apresentação na menor janela.
 - O roteiro desktop também passou no **executável otimizado de produção, com o Vite desligado**.
 - Documento de **280 mil caracteres** carregado e editado no roteiro desktop. O tempo medido inclui definir o conteúdo e inserir texto; não representa um benchmark de latência por tecla.
 
@@ -215,6 +224,8 @@ src/
 src-tauri/
   src/files.rs    leitura UTF-8, conflitos, escrita atômica e recursos
   src/database.rs projetos, referências e preferências em SQLite
+  src/launch.rs   fila de arquivos recebidos pelo sistema e instância única por perfil
+  src/system_integration.rs consulta e escolha explícita de associações MIME
   src/models.rs   tipos compartilhados pelos comandos nativos
   src/lib.rs      comandos assíncronos, executados em workers
   capabilities/   permissões da janela e seletores
@@ -227,6 +238,6 @@ A geometria da janela fica em `$XDG_CONFIG_HOME/io.github.bitdevy.entrelinhas/.w
 
 Em uma instalação normal, o SQLite fica em `$XDG_DATA_HOME/io.github.bitdevy.entrelinhas/library.sqlite3` — normalmente `~/.local/share/io.github.bitdevy.entrelinhas/library.sqlite3`. O código-fonte não recebe dados pessoais.
 
-Repositório: [Bit-Devy/entrelinhas](https://github.com/Bit-Devy/entrelinhas). Desenvolvimento incremental diretamente na `main`, com commits `uN - descrição curta`.
+Repositório: [Davi-Mascarenhas/entrelinhas](https://github.com/Davi-Mascarenhas/entrelinhas). Desenvolvimento incremental diretamente na `main`, com commits `uN - descrição curta`.
 
 Licença [MIT](LICENSE).

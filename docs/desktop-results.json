@@ -1,7 +1,9 @@
 {
-  "passed": 28,
+  "passed": 35,
   "checks": [
-    "primeira abertura pergunta o tema antes de persistir preferências",
+    "primeira abertura apresenta boas-vindas, escolha de tema e padrão em três páginas",
+    "recusar o padrão conclui a apresentação sem alterar associações",
+    "arquivo recebido na primeira execução aguarda o fim da apresentação",
     "tema inicial lembrado sem repetir a apresentação",
     "inicialização em nota vazia",
     "abrir documentos usa o explorador do GNOME pelo portal e permite cancelar",
@@ -28,13 +30,19 @@
     "busca global lê o conteúdo salvo no disco",
     "confirmação de descarte opcional respeita cancelar e descartar",
     "formato padrão TXT e salvamento textual real",
-    "composição preserva atalhos; documento longo (280000 caracteres) em 0.47s"
+    "composição preserva atalhos; documento longo (280000 caracteres) em 0.43s",
+    "registro MIME torna o Entrelinhas disponível em Abrir com para Markdown e TXT",
+    "configurações definem o padrão somente por escolha explícita e confirmam Markdown e TXT no sistema",
+    "Abrir com recebe múltiplos arquivos na mesma janela, preserva rascunhos e evita duplicatas",
+    "inicialização com arquivos abre somente os documentos solicitados pelo sistema",
+    "apresentação incompleta continua disponível, preserva tema e permite aceitar o padrão na menor janela"
   ],
   "engine": "Tauri 2 / WebKitGTK",
   "platform": "Ubuntu 26.10 / Wayland",
-  "version": "1.0.0",
-  "binary": "src-tauri/target/release/entrelinhas",
-  "sha256": "f6a3dc2e42a33089bb8eb66379e304a1e0e690b0a4df6acbf34bef23857eb465",
+  "version": "1.1.0",
+  "binary": "artifacts/release-1.1.0/extracted/usr/bin/entrelinhas",
+  "sha256": "b1e2f139bab4bdff48de38023d18bb34df3277cf39494aa8f0cf31e48a5fe1ea",
   "developmentServer": false,
-  "fileChooser": "org.gnome.Nautilus"
+  "fileChooser": "org.gnome.Nautilus",
+  "packageSha256": "055420537a910a4abe0dbc62fcdef9011f68f6dfff5ceb509d2b3a17e7730231"
 }
