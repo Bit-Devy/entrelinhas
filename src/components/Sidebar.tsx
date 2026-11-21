@@ -333,14 +333,6 @@ export function Sidebar(p: Props) {
             )}
           </div>
         ))}
-        {p.documents.some((document) => !document.projectId) && (
-          <>
-            <div className="section-heading independent-heading">
-              <span>SEM PROJETO</span>
-            </div>
-            {p.documents.filter((document) => !document.projectId).map(documentItem)}
-          </>
-        )}
       </div>
       <div className="sidebar-bottom">
         <div className="local-indicator">

@@ -652,6 +652,22 @@ def main():
             wait(txt_path.exists, 'salvar TXT')
             assert txt_path.read_text() == '**literal** em UTF-8: 日本語'
             passed('formato padrão TXT e salvamento textual real')
+            app.reveal()
+            wait(lambda: any(document['path'] == str(txt_path) for document in app.ipc('load_library')['documents']), 'registrar TXT sem projeto')
+            assert not app.js('return document.querySelector(".library-tree").innerText.includes("Texto.txt")')
+            assert not app.js('return document.querySelector(".library-tree").innerText.includes("SEM PROJETO")')
+            saved_txt = txt_path.read_bytes()
+            app.click('[aria-label="Projeto do documento atual"]')
+            app.click(f'[role="option"][data-project-id="{project_id}"]')
+            if app.js('return document.querySelector(".project-toggle").getAttribute("aria-expanded")') == 'false':
+                app.click('.project-toggle')
+            wait(lambda: app.js('return [...document.querySelectorAll(".document-entry")].some(button=>button.textContent.includes("Texto.txt"))'), 'mostrar TXT associado ao projeto na lateral')
+            app.click('[aria-label="Projeto do documento atual"]')
+            app.click('[role="option"][data-project-id=""]')
+            wait(lambda: not app.js('return [...document.querySelectorAll(".document-entry")].some(button=>button.textContent.includes("Texto.txt"))'), 'retirar TXT da lateral ao remover associação')
+            assert txt_path.read_bytes() == saved_txt
+            assert app.editor('return editor.getText()') == '**literal** em UTF-8: 日本語'
+            passed('lateral mostra apenas documentos de projetos; associar e desvincular preserva arquivo e editor')
             # Simulação de composição verifica que atalhos não interrompem o IME.
             before_tabs = app.js('return document.querySelectorAll("[role=tab]").length')
             app.js('window.dispatchEvent(new KeyboardEvent("keydown",{key:"n",ctrlKey:true,isComposing:true,bubbles:true}))')

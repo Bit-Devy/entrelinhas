@@ -63,7 +63,7 @@ export function ProjectAssignment({
       </span>
       <span>
         <strong>{project?.name ?? 'Sem projeto'}</strong>
-        <small>{project ? 'Organizar nesta coleção' : 'Manter na biblioteca geral'}</small>
+        <small>{project ? 'Organizar nesta coleção' : 'Sem atalho na lateral'}</small>
       </span>
       {(project ? value === project.id : !value) && <Check size={17} className="chosen-check" />}
     </button>

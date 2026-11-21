@@ -1567,10 +1567,6 @@ p {
   justify-content: flex-start;
   width: 100%;
 }
-.independent-heading {
-  margin-top: 30px;
-  font-size: 8px;
-}
 .project-customization {
   display: flex;
   gap: 20px;
