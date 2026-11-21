@@ -15,6 +15,7 @@ Entrelinhas é um editor **desktop de verdade**, feito com Tauri 2, React e Type
 - Salvamento manual em arquivos Markdown e TXT comuns, em qualquer pasta. Abertura e salvamento pelo explorador do desktop via XDG Desktop Portal; no GNOME, utiliza o Nautilus. Os diálogos começam na pasta Documentos configurada no sistema; Salvar como mantém o caminho do arquivo aberto.
 - Integração com **Abrir com** para `.md`, `.markdown` e `.txt`. Novos pedidos chegam à janela já aberta, preservam rascunhos e ativam documentos existentes sem duplicar guias.
 - Projetos lógicos com nome, cor, ícone opcional e referências a documentos externos.
+- [A lateral](docs/screenshots/projects-only.png) oferece acesso rápido somente aos arquivos vinculados a projetos. Arquivos avulsos podem ser abertos e salvos normalmente; vincular ou desvincular um projeto não modifica o arquivo no disco.
 - Guias ocultas com uma única nota; botão **Nova guia** e **Ctrl+T** revelam a faixa ao abrir a segunda. Guias reordenáveis, com conteúdo, seleção e histórico preservados ao alternar.
 - Interface imersiva automática, alternância manual, acesso por Esc e aproximação das bordas.
 - Apresentação inicial em três páginas: boas-vindas, tema e aplicativo padrão opcional. Temas Claro, Escuro e Sépia Noturno, com prévia imediata e respeito às preferências de instalações anteriores.
@@ -76,12 +77,12 @@ O projeto foi compilado e verificado no **Ubuntu 26.10, x86_64, GNOME/Wayland**.
 
 ### Pacote Debian
 
-[Baixe o instalador e os checksums da versão 1.1.0](https://github.com/Davi-Mascarenhas/entrelinhas/releases/tag/v1.1.0).
+[Baixe o instalador e os checksums da versão 1.1.1](https://github.com/Davi-Mascarenhas/entrelinhas/releases/tag/v1.1.1).
 
 Para instalar um pacote compilado localmente:
 
 ```bash
-sudo apt install ./src-tauri/target/release/bundle/deb/Entrelinhas_1.1.0_amd64.deb
+sudo apt install ./src-tauri/target/release/bundle/deb/Entrelinhas_1.1.1_amd64.deb
 ```
 
 O aplicativo aparece no menu como **Entrelinhas**, com ícone próprio. O pacote depende do WebKitGTK 4.1 e GTK 3 do sistema. Uma compilação feita no Ubuntu 26.10 não garante compatibilidade binária com versões anteriores do Ubuntu; para elas, compile no sistema de destino.
@@ -169,9 +170,9 @@ python3 scripts/test-desktop.py --binary src-tauri/target/release/entrelinhas
 
 ### Verificações realizadas
 
-- **79 testes TypeScript:** notas, abas, descarte, preferências, atalhos, Markdown, formatação, TXT, Unicode, busca, imagens, gravação explícita, conflitos, espera de gravações, centralização com diferentes painéis, seletores próprios por mouse e teclado, dicas, guias sob demanda, abertura sem perder texto, apresentação em três páginas, recusa do padrão, tratamento de falhas de associação, migração de preferências, fila de arquivos externos, edição de títulos e nome sugerido ao salvar.
+- **83 testes TypeScript:** notas, abas, descarte, preferências, atalhos, Markdown, formatação, TXT, Unicode, busca, imagens, gravação explícita, conflitos, espera de gravações, centralização com diferentes painéis, seletores próprios por mouse e teclado, dicas, guias sob demanda, abertura sem perder texto, apresentação em três páginas, recusa do padrão, tratamento de falhas de associação, migração de preferências, fila de arquivos externos, edição de títulos, nome sugerido ao salvar e gestos da barra superior com exclusão dos botões e seus ícones.
 - **14 testes Rust:** gravação atômica, conflitos, UTF-8, nomes internacionais, imagens relativas, arquivos somente leitura, recursos inválidos, projetos em Downloads, exclusão sem apagar documentos, localização, busca, renomeação sem sobrescrever, preservação de imagens e projeto, reversão em caso de falha no registro, argumentos do explorador e associações MIME em perfis isolados para as instalações local e Debian.
-- **35 verificações desktop:** inicialização, ocultação sem deslocamento, Esc, descarte após reiniciar, Ctrl+S com seletor GNOME, associação externa, abas, busca/substituição, colagem de imagens, temas, cursores, persistência, layout, F11, conflitos, busca global, confirmação opcional, TXT, paleta de cores nos três temas, primeira abertura, centralização ao redimensionar, formatação inferior sem moldura, menus de tabela, dicas nos três temas, tamanho da janela após reiniciar, duplo clique na barra, títulos, espaçamento dos campos, abertura/salvamento pelo Nautilus, registro em Abrir com, abertura pelo sistema com a janela aberta ou fechada, aceitação e recusa do padrão e apresentação na menor janela.
+- **37 verificações desktop:** inicialização, ocultação sem deslocamento, Esc, descarte após reiniciar, Ctrl+S com seletor GNOME, associação externa, abas, busca/substituição, colagem de imagens, temas, cursores, persistência, layout, F11, conflitos, busca global, confirmação opcional, TXT, paleta de cores nos três temas, primeira abertura, centralização ao redimensionar, formatação inferior sem moldura, menus de tabela, dicas nos três temas, tamanho da janela após reiniciar, duplo clique nas áreas livres da barra e entre os controles, títulos, espaçamento dos campos, abertura/salvamento pelo Nautilus, registro em Abrir com, abertura pelo sistema com a janela aberta ou fechada, aceitação e recusa do padrão, apresentação na menor janela e atalhos na lateral apenas para arquivos vinculados a projetos.
 - O roteiro desktop também passou no **executável otimizado de produção, com o Vite desligado**.
 - Documento de **280 mil caracteres** carregado e editado no roteiro desktop. O tempo medido inclui definir o conteúdo e inserir texto; não representa um benchmark de latência por tecla.
 

@@ -671,8 +671,10 @@ def main():
             app.click('[aria-label="Projeto do documento atual"]')
             app.click('[role="option"][data-project-id=""]')
             wait(lambda: not app.js('return [...document.querySelectorAll(".document-entry")].some(button=>button.textContent.includes("Texto.txt"))'), 'retirar TXT da lateral ao remover associação')
+            wait(lambda: not app.js('return !!document.querySelector(".project-picker-body")'), 'fechar escolha de projeto')
             assert txt_path.read_bytes() == saved_txt
             assert app.editor('return editor.getText()') == '**literal** em UTF-8: 日本語'
+            app.screenshot(output / 'projects-only.png')
             passed('lateral mostra apenas documentos de projetos; associar e desvincular preserva arquivo e editor')
             # Simulação de composição verifica que atalhos não interrompem o IME.
             before_tabs = app.js('return document.querySelectorAll("[role=tab]").length')
