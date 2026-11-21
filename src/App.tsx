@@ -151,7 +151,7 @@ export default function App() {
     },
     [fileOps.openPath],
   )
-  useIncomingFiles(preferencesLoaded && preferences.themeChosen, openIncoming, notify)
+  useIncomingFiles(preferencesLoaded && preferences.onboardingCompleted, openIncoming, notify)
   const closeNote = useCallback(
     async (id: string) => {
       await fileOps.waitForSaves()
@@ -301,7 +301,7 @@ export default function App() {
   )
   const onTyping = useCallback(() => {
     if (
-      preferences.themeChosen &&
+      preferences.onboardingCompleted &&
       preferences.autoImmersive &&
       !settings &&
       !find &&
@@ -314,7 +314,7 @@ export default function App() {
       setSelectionRect(null)
     }
   }, [
-    preferences.themeChosen,
+    preferences.onboardingCompleted,
     preferences.autoImmersive,
     settings,
     find,
@@ -349,7 +349,7 @@ export default function App() {
         return
       }
       if (
-        !preferences.themeChosen ||
+        !preferences.onboardingCompleted ||
         settings ||
         dialog.visible ||
         librarySearch ||
@@ -811,10 +811,14 @@ export default function App() {
           )}
         </div>
       </section>
-      {preferencesLoaded && !preferences.themeChosen && (
+      {preferencesLoaded && !preferences.onboardingCompleted && (
         <WelcomeTheme
-          onChoose={(theme) => {
+          theme={preferences.theme}
+          onThemeChange={(theme) => {
             setPreferences((current) => ({ ...current, theme, themeChosen: true }))
+          }}
+          onComplete={() => {
+            setPreferences((current) => ({ ...current, onboardingCompleted: true }))
             requestAnimationFrame(() => editors.current.get(activeId)?.commands.focus())
           }}
         />

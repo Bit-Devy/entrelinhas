@@ -3,6 +3,7 @@ import type { Preferences } from './types'
 export const defaultPreferences: Preferences = {
   theme: 'light',
   themeChosen: false,
+  onboardingCompleted: false,
   cursor: 'block',
   autoImmersive: true,
   askBeforeDiscard: false,
@@ -70,6 +71,10 @@ export function readPreferences(value: unknown): Preferences {
   ] as const) {
     if (typeof input[key] === 'boolean') result[key] = input[key]
   }
+  // Quem já usava o aplicativo mantém seu tema e não precisa repetir a apresentação.
+  // Uma escolha de tema durante o novo fluxo ainda não conclui as três etapas.
+  result.onboardingCompleted =
+    typeof input.onboardingCompleted === 'boolean' ? input.onboardingCompleted : result.themeChosen
   if (input.shortcuts && typeof input.shortcuts === 'object') {
     for (const key of Object.keys(result.shortcuts) as (keyof Preferences['shortcuts'])[]) {
       const shortcut = (input.shortcuts as Record<string, unknown>)[key]

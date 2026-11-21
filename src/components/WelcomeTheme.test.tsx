@@ -1,21 +1,81 @@
+import { useState } from 'react'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { backend } from '../native/api'
+import type { Theme } from '../core/types'
 import { WelcomeTheme } from './WelcomeTheme'
 
-afterEach(cleanup)
+beforeEach(() => {
+  vi.spyOn(backend, 'defaultAppStatus').mockResolvedValue({
+    supported: true,
+    registered: true,
+    markdown: false,
+    text: false,
+  })
+  vi.spyOn(backend, 'setDefaultApp').mockResolvedValue({
+    supported: true,
+    registered: true,
+    markdown: true,
+    text: true,
+  })
+})
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
+
+function Welcome({ complete = vi.fn(), preview = vi.fn() }) {
+  const [theme, setTheme] = useState<Theme>('light')
+  return (
+    <WelcomeTheme
+      theme={theme}
+      onThemeChange={(next) => {
+        setTheme(next)
+        preview(next)
+      }}
+      onComplete={complete}
+    />
+  )
+}
+
 it.each([
   ['Claro', 'light'],
   ['Escuro', 'dark'],
   ['Sépia Noturno', 'sepia'],
-])('permite começar com o tema %s', (label, theme) => {
-  const choose = vi.fn()
-  render(<WelcomeTheme onChoose={choose} />)
+])('apresenta boas-vindas, permite escolher %s e recusar o padrão', async (label, theme) => {
+  const preview = vi.fn(),
+    complete = vi.fn()
+  render(<Welcome preview={preview} complete={complete} />)
+  expect(screen.getByRole('heading', { name: 'Um espaço para suas palavras.' })).toBeInTheDocument()
+  expect(screen.getByText('Etapa 1 de 3')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }))
+  expect(screen.getByText('Etapa 2 de 3')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: `Usar tema ${label}` }))
-  expect(choose).toHaveBeenCalledExactlyOnceWith(theme)
+  expect(preview).toHaveBeenCalledWith(theme)
+  expect(screen.getByRole('button', { name: `Usar tema ${label}` })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  expect(complete).not.toHaveBeenCalled()
+  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }))
+  await screen.findByRole('button', { name: 'Usar como padrão' })
+  expect(screen.getByText('Etapa 3 de 3')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Agora não' }))
+  expect(complete).toHaveBeenCalledOnce()
+  expect(backend.setDefaultApp).not.toHaveBeenCalled()
 })
-it('não registra uma escolha ao pressionar Esc', () => {
-  const choose = vi.fn()
-  render(<WelcomeTheme onChoose={choose} />)
+
+it('permite voltar sem perder a escolha de tema e não conclui com Esc', () => {
+  const complete = vi.fn()
+  render(<Welcome complete={complete} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Usar tema Escuro' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Voltar' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Continuar' }))
+  expect(screen.getByRole('button', { name: 'Usar tema Escuro' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
   fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
-  expect(choose).not.toHaveBeenCalled()
+  expect(complete).not.toHaveBeenCalled()
   expect(screen.getByRole('dialog')).toBeInTheDocument()
 })

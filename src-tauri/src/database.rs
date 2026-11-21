@@ -71,6 +71,7 @@ pub fn preferences(path: &Path, value: serde_json::Value) -> AppResult<()> {
     let allowed = [
         "theme",
         "themeChosen",
+        "onboardingCompleted",
         "cursor",
         "autoImmersive",
         "askBeforeDiscard",
@@ -271,7 +272,7 @@ mod tests {
         register(&db, &note, Some("escola"), true).unwrap();
         preferences(
             &db,
-            serde_json::json!({"theme":"sepia","themeChosen":true,"draft":"NUNCA SALVAR ESTE TEXTO"}),
+            serde_json::json!({"theme":"sepia","themeChosen":true,"onboardingCompleted":false,"draft":"NUNCA SALVAR ESTE TEXTO"}),
         )
         .unwrap();
         let reopened = library(&db).unwrap();
@@ -280,6 +281,7 @@ mod tests {
         assert_eq!(reopened.documents[0].project_id.as_deref(), Some("escola"));
         assert_eq!(reopened.preferences["theme"], "sepia");
         assert_eq!(reopened.preferences["themeChosen"], true);
+        assert_eq!(reopened.preferences["onboardingCompleted"], false);
         assert!(reopened.preferences.get("draft").is_none());
         delete_project(&db, "escola").unwrap();
         assert!(note.exists());

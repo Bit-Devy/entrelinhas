@@ -85,11 +85,26 @@ describe('preferências e atalhos', () => {
 describe('primeira escolha de tema', () => {
   it('não conclui a apresentação sem uma escolha explícita', () => {
     expect(readPreferences({}).themeChosen).toBe(false)
+    expect(readPreferences({}).onboardingCompleted).toBe(false)
   })
   it.each(['light', 'dark', 'sepia'])('preserva o tema %s de instalações anteriores', (theme) => {
-    expect(readPreferences({ theme })).toMatchObject({ theme, themeChosen: true })
+    expect(readPreferences({ theme })).toMatchObject({
+      theme,
+      themeChosen: true,
+      onboardingCompleted: true,
+    })
   })
   it('respeita uma apresentação ainda não concluída', () => {
     expect(readPreferences({ theme: 'dark', themeChosen: false }).themeChosen).toBe(false)
+    expect(
+      readPreferences({ theme: 'dark', themeChosen: true, onboardingCompleted: false }),
+    ).toMatchObject({ theme: 'dark', themeChosen: true, onboardingCompleted: false })
+    expect(readPreferences({ theme: 'light', themeChosen: false }).onboardingCompleted).toBe(false)
+  })
+  it('lembra a conclusão sem depender de associações de arquivos', () => {
+    expect(
+      readPreferences({ theme: 'sepia', themeChosen: true, onboardingCompleted: true })
+        .onboardingCompleted,
+    ).toBe(true)
   })
 })

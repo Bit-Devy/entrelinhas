@@ -69,11 +69,15 @@ class Desktop:
         stored_theme = library['preferences'].get('theme', 'light')
         wait(lambda: self.js('return document.documentElement.dataset.theme') == stored_theme, 'aplicar preferências carregadas')
         needs_choice = not library['preferences'].get('themeChosen', stored_theme in ('light', 'dark', 'sepia') and 'theme' in library['preferences'])
-        if needs_choice:
-            wait(lambda: self.js('return !!document.querySelector(".welcome-modal")'), 'pergunta inicial de tema')
+        needs_welcome = not library['preferences'].get('onboardingCompleted', not needs_choice)
+        if needs_welcome:
+            wait(lambda: self.js('return !!document.querySelector(".welcome-modal")'), 'apresentação inicial')
             if choose_theme:
+                self.click('.welcome-actions .primary')
                 self.click('[aria-label="Usar tema Claro"]')
-                wait(lambda: self.ipc('load_library')['preferences'].get('themeChosen'), 'guardar escolha de tema')
+                self.click('.welcome-actions .primary')
+                self.click('.welcome-actions button:last-child')
+                wait(lambda: self.ipc('load_library')['preferences'].get('onboardingCompleted'), 'concluir apresentação')
 
     def call(self, path, value=None, method=None):
         return self.request('/session/' + self.session + path, value, method)
@@ -243,16 +247,36 @@ def main():
             print('OK · ' + name, flush=True)
         try:
             wait(lambda: urllib.request.urlopen(f'http://127.0.0.1:{port}/status', timeout=1).status == 200, 'WebDriver')
-            app.start(choose_theme=False)
+            first_file = downloads / 'Primeiro arquivo.md'
+            first_file.write_text('# Primeiro documento\n\nAberto pelo sistema.', encoding='utf-8')
+            app.start(choose_theme=False, launch_args=[str(first_file)])
             native_version = app.ipc('plugin:app|version')
             assert native_version == json.loads((root / 'package.json').read_text())['version']
             development_server = app.js('return location.origin === "http://127.0.0.1:1420"')
-            assert app.js('return document.querySelectorAll(".welcome-modal .theme-choice").length') == 3
+            assert app.js('return document.querySelectorAll(".welcome-steps li").length') == 3
+            assert 'Etapa 1 de 3' in app.js('return document.querySelector(".welcome-modal").innerText')
             assert not app.ipc('load_library')['preferences'], 'O tema padrão não deve ser persistido antes da escolha.'
             app.screenshot(output / 'welcome.png')
+            app.click('.welcome-actions .primary')
+            assert app.js('return document.querySelectorAll(".welcome-modal .theme-choice").length') == 3
+            app.screenshot(output / 'welcome-theme.png')
             app.click('[aria-label="Usar tema Sépia Noturno"]')
             wait(lambda: app.ipc('load_library')['preferences'].get('themeChosen'), 'persistir escolha inicial')
-            passed('primeira abertura pergunta o tema antes de persistir preferências')
+            assert app.ipc('load_library')['preferences']['onboardingCompleted'] is False
+            assert app.editor('return editor.getText()') == '', 'Arquivos externos devem aguardar o fim da apresentação.'
+            app.click('.welcome-actions .primary')
+            wait(lambda: app.js('return document.querySelector(".default-app").getAttribute("aria-busy")') == 'false', 'verificar padrão na apresentação')
+            app.screenshot(output / 'welcome-default.png')
+            assert 'Etapa 3 de 3' in app.js('return document.querySelector(".welcome-modal").innerText')
+            passed('primeira abertura apresenta boas-vindas, escolha de tema e padrão em três páginas')
+            app.click('.welcome-actions button:last-child')
+            wait(lambda: app.ipc('load_library')['preferences'].get('onboardingCompleted'), 'lembrar conclusão após recusar o padrão')
+            assert not (config_home / 'mimeapps.list').exists(), 'Agora não deve preservar os padrões do usuário.'
+            passed('recusar o padrão conclui a apresentação sem alterar associações')
+            wait(lambda: app.editor('return editor.getText().startsWith("Primeiro documento")'), 'abrir arquivo que aguardava a apresentação')
+            assert app.js('return document.querySelectorAll(".tiptap").length') == 1
+            passed('arquivo recebido na primeira execução aguarda o fim da apresentação')
+            app.ipc('forget_document', path=str(first_file))
             app.click('[aria-label="Fechar aplicativo"]')
             time.sleep(.3)
             app.stop()
@@ -680,6 +704,28 @@ def main():
             assert app.js('return document.querySelectorAll(".tiptap").length') == 2
             assert not app.js('return [...document.querySelectorAll(".tiptap")].some(node=>node.editor?.getText().endsWith(" FIM"))')
             passed('inicialização com arquivos abre somente os documentos solicitados pelo sistema')
+            unfinished = app.ipc('load_library')['preferences']
+            unfinished['onboardingCompleted'] = False
+            app.ipc('save_preferences', preferences=unfinished)
+            app.click('[aria-label="Fechar aplicativo"]')
+            time.sleep(.2)
+            app.stop()
+            (config_home / 'mimeapps.list').unlink()
+            app.start(choose_theme=False)
+            assert app.js('return !!document.querySelector(".welcome-modal")')
+            app.call('/window/rect', {'width': 720, 'height': 480})
+            app.click('.welcome-actions .primary')
+            assert app.js('return document.querySelector(arguments[0]).getAttribute("aria-pressed")', '[aria-label="Usar tema Sépia Noturno"]') == 'true'
+            app.click('.welcome-actions .primary')
+            wait(lambda: app.js('return document.querySelector(".default-app button").innerText') == 'Usar como padrão', 'aceitar padrão na apresentação')
+            assert app.js('const r=document.querySelector(".welcome-actions").getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight'), 'Navegação da apresentação deve ficar visível na menor janela.'
+            app.js('document.querySelector(".default-app button").scrollIntoView({block:"center"})')
+            app.paint()
+            app.click('.default-app button')
+            wait(lambda: app.js('return !document.querySelector(".welcome-modal")'), 'definir padrão e começar a escrever')
+            wait(lambda: app.ipc('load_library')['preferences'].get('onboardingCompleted'), 'persistir conclusão ao aceitar padrão')
+            assert app.ipc('default_app_status')['markdown'] and app.ipc('default_app_status')['text']
+            passed('apresentação incompleta continua disponível, preserva tema e permite aceitar o padrão na menor janela')
             app.click('[aria-label="Fechar aplicativo"]')
             time.sleep(.2)
             app.stop()
