@@ -2,6 +2,7 @@
 """Testes reais do Tauri/WebKitGTK. Usa uma biblioteca e arquivos isolados."""
 import argparse
 import base64
+import hashlib
 import json
 import http.client
 import os
@@ -232,6 +233,9 @@ def main():
         try:
             wait(lambda: urllib.request.urlopen(f'http://127.0.0.1:{port}/status', timeout=1).status == 200, 'WebDriver')
             app.start(choose_theme=False)
+            native_version = app.ipc('plugin:app|version')
+            assert native_version == json.loads((root / 'package.json').read_text())['version']
+            development_server = app.js('return location.origin === "http://127.0.0.1:1420"')
             assert app.js('return document.querySelectorAll(".welcome-modal .theme-choice").length') == 3
             assert not app.ipc('load_library')['preferences'], 'O tema padrão não deve ser persistido antes da escolha.'
             app.screenshot(output / 'welcome.png')
@@ -580,8 +584,8 @@ def main():
             app.js('return [...document.querySelectorAll(".nav-button")].find(button=>button.innerText.includes("Buscar documentos")).click()')
             app.keys('[aria-label="Buscar documentos salvos"]', 'EXTERNA')
             assert app.js('const wrapper=document.querySelector(".global-search-input"), input=wrapper.querySelector("input"), icon=wrapper.querySelector("svg");return input.getBoundingClientRect().left+parseFloat(getComputedStyle(input).paddingLeft)-icon.getBoundingClientRect().right>=16 && getComputedStyle(input).outlineStyle==="none"')
-            app.screenshot(output / 'search-spacing.png')
             wait(lambda: app.js('return !!document.querySelector(".search-result")'), 'busca nos arquivos salvos')
+            app.screenshot(output / 'search-spacing.png')
             assert 'Entre as linhas.md' in app.js('return document.querySelector(".search-result").innerText')
             app.click('[aria-label="Fechar painel"]')
             passed('busca global lê o conteúdo salvo no disco')
@@ -627,7 +631,7 @@ def main():
             app.click('[aria-label="Fechar aplicativo"]')
             time.sleep(.2)
             app.stop()
-            (output.parent / 'desktop-results.json').write_text(json.dumps({'passed': len(results), 'checks': results, 'engine': 'Tauri 2 / WebKitGTK', 'platform': 'Ubuntu 26.10 / Wayland'}, ensure_ascii=False, indent=2))
+            (output.parent / 'desktop-results.json').write_text(json.dumps({'passed': len(results), 'checks': results, 'engine': 'Tauri 2 / WebKitGTK', 'platform': 'Ubuntu 26.10 / Wayland', 'version': native_version, 'binary': args.binary, 'sha256': hashlib.sha256((root / args.binary).read_bytes()).hexdigest(), 'developmentServer': development_server, 'fileChooser': provider}, ensure_ascii=False, indent=2))
             print(f'\n{len(results)} verificações desktop passaram.', flush=True)
         finally:
             app.stop()

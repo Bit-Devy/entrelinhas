@@ -1,13 +1,18 @@
 {
-  "passed": 23,
+  "passed": 28,
   "checks": [
     "primeira abertura pergunta o tema antes de persistir preferências",
     "tema inicial lembrado sem repetir a apresentação",
     "inicialização em nota vazia",
+    "abrir documentos usa o explorador do GNOME pelo portal e permite cancelar",
+    "tamanho e maximização preservados após fechar e reabrir",
+    "duplo clique na barra maximiza e restaura sem minimizar",
+    "duplo clique no título edita o nome do rascunho",
     "coluna centralizada em janelas estreitas e largas",
     "imersão, cursor em bloco, posição estável e Esc",
     "fechar e reabrir descarta rascunhos sem recuperação",
     "Ctrl+S e seletor GNOME gravam Markdown em Downloads e associam projeto",
+    "renomear preserva conteúdo, alterações e projeto, sem substituir outro arquivo",
     "projetos persistem; alterações de documentos exigem salvamento manual",
     "abas, atalhos e abertura sem duplicação",
     "localizar e substituir",
@@ -23,11 +28,13 @@
     "busca global lê o conteúdo salvo no disco",
     "confirmação de descarte opcional respeita cancelar e descartar",
     "formato padrão TXT e salvamento textual real",
-    "composição preserva atalhos; documento longo (280000 caracteres) em 0.42s"
+    "composição preserva atalhos; documento longo (280000 caracteres) em 0.47s"
   ],
   "engine": "Tauri 2 / WebKitGTK",
   "platform": "Ubuntu 26.10 / Wayland",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "binary": "src-tauri/target/release/entrelinhas",
-  "developmentServer": false
+  "sha256": "f6a3dc2e42a33089bb8eb66379e304a1e0e690b0a4df6acbf34bef23857eb465",
+  "developmentServer": false,
+  "fileChooser": "org.gnome.Nautilus"
 }

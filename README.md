@@ -8,9 +8,11 @@ Entrelinhas é um editor **desktop de verdade**, feito com Tauri 2, React e Type
 
 ## Suas palavras, no seu tempo
 
-- Inicialização sempre em uma nota nova, vazia e mantida em memória.
+- Inicialização sempre em uma nota nova, vazia e mantida em memória. Escrita sem o cabeçalho decorativo, começando mais acima.
+- Tamanho e maximização da janela lembrados ao reabrir. Duplo clique na área livre da barra maximiza ou restaura.
+- Duplo clique no título abre a edição do nome: rascunhos ganham um nome sugerido; arquivos salvos são renomeados na mesma pasta, sem salvar as alterações do editor nem substituir outro arquivo.
 - **Nenhum salvamento automático, recuperação de rascunhos ou restauração de abas.**
-- Salvamento manual em arquivos Markdown e TXT comuns, em qualquer pasta.
+- Salvamento manual em arquivos Markdown e TXT comuns, em qualquer pasta. Abertura e salvamento pelo explorador do desktop via XDG Desktop Portal; no GNOME, utiliza o Nautilus. Os diálogos começam na pasta Documentos configurada no sistema; Salvar como mantém o caminho do arquivo aberto.
 - Projetos lógicos com nome, cor, ícone opcional e referências a documentos externos.
 - Guias ocultas com uma única nota; botão **Nova guia** e **Ctrl+T** revelam a faixa ao abrir a segunda. Guias reordenáveis, com conteúdo, seleção e histórico preservados ao alternar.
 - Interface imersiva automática, alternância manual, acesso por Esc e aproximação das bordas.
@@ -39,7 +41,7 @@ O editor usa TipTap/ProseMirror, com desfazer/refazer, composição de texto, Un
 
 Suporta negrito, itálico, sublinhado, tachado, títulos, listas, checklists interativas, citações, código, links, separadores, alinhamento, destaque, cores, tamanho de texto, imagens e tabelas com edição de linhas e colunas.
 
-O formato inicial é `.md`. Altere para `.txt` em **Configurações → Arquivos**. O seletor **Salvar como** também permite escolher o formato para cada arquivo.
+O formato inicial é `.md`. Altere para `.txt` em **Configurações → Arquivos**. O seletor **Salvar como** também permite escolher o formato para cada arquivo. A aparência e os controles do explorador seguem o desktop; o pacote inclui as dependências do portal e o Zenity como alternativa.
 
 - **Markdown:** títulos, listas, links, código e demais elementos comuns usam sintaxe Markdown. Cor, tamanho, sublinhado, alinhamento, tabelas e tarefas utilizam HTML compatível dentro do Markdown quando necessário para manter a formatação reversível.
 - **TXT:** contém somente texto UTF-8. Antes de exportar conteúdo formatado, o aplicativo avisa sobre a perda de formatação e imagens. O editor aberto mantém a versão rica até ser fechado.
@@ -61,7 +63,7 @@ As capturas abaixo são da janela Tauri real, executada no Ubuntu 26.10 com Wayl
 | ------------------------------------ | ------------------------------------ | -------------------------------------------- |
 | ![Claro](docs/screenshots/light.png) | ![Escuro](docs/screenshots/dark.png) | ![Sépia Noturno](docs/screenshots/sepia.png) |
 
-[Ver o modo imersivo](docs/screenshots/imersivo.png) · [Escolha inicial de tema](docs/screenshots/welcome.png) · [Seletor de cores no Sépia Noturno](docs/screenshots/color-sepia.png) · [Seleção de projeto](docs/screenshots/project-picker.png) · [Menus temáticos](docs/screenshots/select-sepia.png) · [Formatação inferior](docs/screenshots/formatting-bottom.png) · [Dicas de botões](docs/screenshots/tooltip-sepia.png).
+[Ver o modo imersivo](docs/screenshots/imersivo.png) · [Escolha inicial de tema](docs/screenshots/welcome.png) · [Seletor de cores no Sépia Noturno](docs/screenshots/color-sepia.png) · [Seleção de projeto](docs/screenshots/project-picker.png) · [Menus temáticos](docs/screenshots/select-sepia.png) · [Formatação inferior](docs/screenshots/formatting-bottom.png) · [Dicas de botões](docs/screenshots/tooltip-sepia.png) · [Edição do título](docs/screenshots/rename-title.png) · [Busca com mais espaço](docs/screenshots/search-spacing.png) · [Página inicial sem cabeçalho](docs/screenshots/blank.png).
 
 Os menus de seleção e as dicas usam as cores do tema do aplicativo. Os seletores de opções permitem navegar com setas, Home/End, digitar o início do nome e confirmar com Enter; Esc cancela a seleção sem fechar as configurações. Os diálogos do sistema para abrir e salvar arquivos acompanham o modo claro ou escuro; Sépia Noturno usa a variante escura do GTK.
 
@@ -73,12 +75,12 @@ O projeto foi compilado e verificado no **Ubuntu 26.10, x86_64, GNOME/Wayland**.
 
 ### Pacote Debian
 
-[Baixe o instalador e os checksums da versão 0.3.0](https://github.com/Bit-Devy/entrelinhas/releases/tag/v0.3.0).
+[Baixe o instalador e os checksums da versão 1.0.0](https://github.com/Bit-Devy/entrelinhas/releases/tag/v1.0.0).
 
 Para instalar um pacote compilado localmente:
 
 ```bash
-sudo apt install ./src-tauri/target/release/bundle/deb/Entrelinhas_0.3.0_amd64.deb
+sudo apt install ./src-tauri/target/release/bundle/deb/Entrelinhas_1.0.0_amd64.deb
 ```
 
 O aplicativo aparece no menu como **Entrelinhas**, com ícone próprio. O pacote depende do WebKitGTK 4.1 e GTK 3 do sistema. Uma compilação feita no Ubuntu 26.10 não garante compatibilidade binária com versões anteriores do Ubuntu; para elas, compile no sistema de destino.
@@ -106,11 +108,12 @@ npm ci
 npm run desktop
 ```
 
-Bibliotecas instaladas pelo script:
+Bibliotecas e serviços instalados pelo script:
 
 ```text
 libwebkit2gtk-4.1-dev build-essential curl wget file
 libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev gh
+xdg-desktop-portal xdg-desktop-portal-gnome zenity
 ```
 
 `npm run desktop` inicia Vite e a janela Tauri juntos. `npm run dev` sozinho serve a interface para desenvolvimento, mas as operações nativas exigem a janela desktop. Não existe armazenamento simulado no navegador.
@@ -147,7 +150,7 @@ npm run dev
 npm run test:desktop
 ```
 
-Se o WebKitWebDriver não estiver no PATH, defina `WEBKIT_WEBDRIVER=/caminho/para/WebKitWebDriver`. O teste cria sua própria instância de `tauri-driver`, diretório XDG, banco SQLite e arquivos temporários. O seletor nativo é operado por AT-SPI somente na instância isolada do teste. Nenhum arquivo pessoal é utilizado.
+Se o WebKitWebDriver não estiver no PATH, defina `WEBKIT_WEBDRIVER=/caminho/para/WebKitWebDriver`. O teste cria sua própria instância de `tauri-driver`, diretórios XDG de dados e configuração, banco SQLite e arquivos temporários dentro de `artifacts/`. O seletor do portal é operado por AT-SPI: o roteiro identifica somente a nova janela criada após seu pedido e exclui diálogos que já estavam abertos. A pasta Documentos é redirecionada apenas na configuração isolada do teste. Nenhum documento pessoal é utilizado.
 
 O mesmo roteiro pode validar a versão empacotada:
 
@@ -157,9 +160,9 @@ python3 scripts/test-desktop.py --binary src-tauri/target/release/entrelinhas
 
 ### Verificações realizadas
 
-- **58 testes TypeScript:** notas, abas, descarte, preferências, atalhos, Markdown, formatação, TXT, Unicode, busca, imagens, gravação explícita, conflitos, espera de gravações, centralização com diferentes painéis, seletores próprios por mouse e teclado, dicas, guias sob demanda, abertura sem perder texto e primeira escolha de tema.
-- **6 testes Rust:** gravação atômica, conflitos, UTF-8, nomes internacionais, imagens relativas, arquivos somente leitura, recursos inválidos, projetos em Downloads, exclusão sem apagar documentos, localização e busca.
-- **23 verificações desktop:** inicialização, ocultação sem deslocamento, Esc, descarte após reiniciar, Ctrl+S com seletor GNOME, associação externa, abas, busca/substituição, colagem de imagens, temas, cursores, persistência, layout, F11, conflitos, busca global, confirmação opcional, TXT, paleta de cores nos três temas, primeira abertura, centralização ao redimensionar, formatação inferior sem moldura, menus de tabela e dicas nos três temas.
+- **72 testes TypeScript:** notas, abas, descarte, preferências, atalhos, Markdown, formatação, TXT, Unicode, busca, imagens, gravação explícita, conflitos, espera de gravações, centralização com diferentes painéis, seletores próprios por mouse e teclado, dicas, guias sob demanda, abertura sem perder texto, primeira escolha de tema, edição de títulos e nome sugerido ao salvar.
+- **9 testes Rust:** gravação atômica, conflitos, UTF-8, nomes internacionais, imagens relativas, arquivos somente leitura, recursos inválidos, projetos em Downloads, exclusão sem apagar documentos, localização, busca, renomeação sem sobrescrever, preservação de imagens e projeto e reversão em caso de falha no registro.
+- **28 verificações desktop:** inicialização, ocultação sem deslocamento, Esc, descarte após reiniciar, Ctrl+S com seletor GNOME, associação externa, abas, busca/substituição, colagem de imagens, temas, cursores, persistência, layout, F11, conflitos, busca global, confirmação opcional, TXT, paleta de cores nos três temas, primeira abertura, centralização ao redimensionar, formatação inferior sem moldura, menus de tabela, dicas nos três temas, tamanho da janela após reiniciar, duplo clique na barra, títulos, espaçamento dos campos e abertura/salvamento pelo Nautilus.
 - O roteiro desktop também passou no **executável otimizado de produção, com o Vite desligado**.
 - Documento de **280 mil caracteres** carregado e editado no roteiro desktop. O tempo medido inclui definir o conteúdo e inserir texto; não representa um benchmark de latência por tecla.
 
@@ -189,6 +192,8 @@ Os testes verificam Unicode e o tratamento de eventos de composição. **Uma ses
 | Revelar interface                   | Esc                             |
 | Menu do documento                   | Alt+F; setas para navegar       |
 | Tela cheia                          | F11                             |
+| Maximizar / restaurar janela        | Duplo clique na área livre da barra |
+| Editar título                       | Duplo clique no título; Enter com foco nele |
 | Aumentar / reduzir / restaurar zoom | Ctrl+Plus / Ctrl+Minus / Ctrl+0 |
 
 Abrir o primeiro arquivo reutiliza a nota vazia inicial. Texto ou projeto já escolhidos nessa nota são preservados em uma guia separada. Ao voltar a uma única nota, a faixa de guias se recolhe.
@@ -217,6 +222,8 @@ src-tauri/
 assets/icon.svg   desenho original do ícone
 scripts/          preparação, instalação local e teste desktop
 ```
+
+A geometria da janela fica em `$XDG_CONFIG_HOME/io.github.bitdevy.entrelinhas/.window-state.json` (normalmente `~/.config/io.github.bitdevy.entrelinhas/`). Esse arquivo contém somente o estado da janela.
 
 Em uma instalação normal, o SQLite fica em `$XDG_DATA_HOME/io.github.bitdevy.entrelinhas/library.sqlite3` — normalmente `~/.local/share/io.github.bitdevy.entrelinhas/library.sqlite3`. O código-fonte não recebe dados pessoais.
 
