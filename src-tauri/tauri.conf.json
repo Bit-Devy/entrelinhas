@@ -46,7 +46,12 @@
       "deb": {
         "desktopTemplate": "resources/entrelinhas.desktop",
         "conflicts": ["entre-linhas"],
-        "replaces": ["entre-linhas"]
+        "replaces": ["entre-linhas"],
+        "depends": [
+          "xdg-desktop-portal",
+          "xdg-desktop-portal-gnome | xdg-desktop-portal-gtk",
+          "zenity"
+        ]
       }
     }
   }

@@ -87,6 +87,8 @@ class Desktop:
         return self.call('/element', {'using': 'css selector', 'value': css})['element-6066-11e4-a52e-4f735466cecf']
 
     def click(self, css):
+        if 'Inserir imagem' in css or 'Abrir documento' in css:
+            mark_native_dialog()
         self.call('/element/' + self.element(css) + '/click', {})
 
     def choose(self, label, value):
@@ -101,6 +103,8 @@ class Desktop:
         self.call('/element/' + self.element(css) + '/value', {'text': text})
 
     def key(self, key, ctrl=False, shift=False):
+        if ctrl and key.lower() in ('s', 'o'):
+            mark_native_dialog()
         self.js('window.dispatchEvent(new KeyboardEvent("keydown",{key:arguments[0],ctrlKey:arguments[1],shiftKey:arguments[2],bubbles:true,cancelable:true}))', key, ctrl, shift)
 
     def editor(self, expression, *args):
@@ -140,6 +144,32 @@ class Desktop:
             self.session = None
 
 
+_native_dialogs_before = []
+
+
+def native_dialogs():
+    import gi
+    gi.require_version('Atspi', '2.0')
+    from gi.repository import Atspi
+    root = Atspi.get_desktop(0)
+    dialogs = []
+    for index in range(root.get_child_count()):
+        application = root.get_child_at_index(index)
+        if not any(name in application.get_name().lower() for name in ('nautilus', 'portal', 'entrelinhas', 'zenity')):
+            continue
+        for child in range(application.get_child_count()):
+            dialog = application.get_child_at_index(child)
+            state = dialog.get_state_set()
+            if state.contains(Atspi.StateType.SHOWING) and (dialog.get_role_name() == 'file chooser' or state.contains(Atspi.StateType.MODAL) or dialog.get_name() in ('Salvar como', 'Save As', 'Save', 'Abrir', 'Open', 'Inserir imagem', 'Abrir documento', 'Localizar documento')):
+                dialogs.append(dialog)
+    return dialogs
+
+
+def mark_native_dialog():
+    global _native_dialogs_before
+    _native_dialogs_before = native_dialogs()
+
+
 def native_chooser(data_home, filename=None):
     # AT-SPI atua apenas na instância de teste; nunca em outra janela do usuário.
     import gi
@@ -152,30 +182,22 @@ def native_chooser(data_home, filename=None):
             yield from walk(node.get_child_at_index(index))
 
     def find_dialog():
-        root = Atspi.get_desktop(0)
-        for index in range(root.get_child_count()):
-            app = root.get_child_at_index(index)
-            if app.get_name() != 'entrelinhas':
-                continue
-            try:
-                environment = Path(f'/proc/{app.get_process_id()}/environ').read_bytes()
-            except OSError:
-                continue
-            if f'XDG_DATA_HOME={data_home}'.encode() not in environment.split(b'\0'):
-                continue
-            for child in range(app.get_child_count()):
-                dialog = app.get_child_at_index(child)
-                if dialog.get_role_name() == 'file chooser' and dialog.get_state_set().contains(Atspi.StateType.SHOWING):
-                    return dialog
-        return None
+        # O portal pertence ao desktop. Só usa a nova janela criada após o
+        # pedido do teste; diálogos que já estavam abertos ficam excluídos.
+        candidates = [dialog for dialog in native_dialogs() if dialog not in _native_dialogs_before]
+        return candidates[0] if len(candidates) == 1 else None
 
     dialog = wait(find_dialog, 'seletor nativo do GNOME')
+    provider = dialog.get_application().get_name()
     if filename:
-        entry = next(node for node in walk(dialog) if node.get_role_name() == 'text' and node.get_state_set().contains(Atspi.StateType.SHOWING))
-        assert Atspi.EditableText.set_text_contents(entry, str(filename))
-    labels = ('Save', 'Salvar') if filename else ('Cancel', 'Cancelar')
+        entry = next(node for node in walk(dialog) if node.get_role_name() in ('text', 'entry') and node.get_state_set().contains(Atspi.StateType.SHOWING) and node.get_state_set().contains(Atspi.StateType.EDITABLE))
+        assert Atspi.EditableText.set_text_contents(entry, filename.name if 'nautilus' in provider.lower() else str(filename))
+        wait(lambda: Atspi.Text.get_text(entry, 0, -1) == (filename.name if 'nautilus' in provider.lower() else str(filename)), 'preencher nome do arquivo')
+    labels = ('Save', 'Salvar') if filename else ('Cancel', 'Cancelar', 'Fechar', 'Close')
     button = next(node for node in walk(dialog) if node.get_role_name() == 'button' and node.get_name() in labels)
+    wait(lambda: button.get_state_set().contains(Atspi.StateType.SENSITIVE), 'habilitar ação do seletor')
     assert Atspi.Action.do_action(button, 0)
+    return provider
 
 
 def main():
@@ -190,11 +212,14 @@ def main():
     native_driver = os.environ.get('WEBKIT_WEBDRIVER') or shutil.which('WebKitWebDriver')
     if not native_driver:
         raise SystemExit('Instale webkitgtk-webdriver ou defina WEBKIT_WEBDRIVER.')
-    with tempfile.TemporaryDirectory(prefix='entrelinhas-e2e-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='entrelinhas-e2e-', dir=root / 'artifacts') as temporary:
         directory = Path(temporary)
         data_home = directory / 'xdg'
         downloads = directory / 'Downloads'
         downloads.mkdir()
+        config_home = directory / 'config'
+        config_home.mkdir()
+        (config_home / 'user-dirs.dirs').write_text(f'XDG_DOCUMENTS_DIR="{downloads}"\n', encoding='utf-8')
         port, native_port = free_port(), free_port()
         environment = {**os.environ, 'XDG_DATA_HOME': str(data_home), 'XDG_CONFIG_HOME': str(directory / 'config')}
         log = (output.parent / 'desktop-driver.log').open('w')
@@ -228,6 +253,11 @@ def main():
             assert app.js('const editor=document.querySelector(".tiptap").getBoundingClientRect(), bar=document.querySelector(".document-toolbar").getBoundingClientRect();return Math.abs(editor.top-bar.bottom-56)<1')
             app.screenshot(output / 'blank.png')
             passed('inicialização em nota vazia')
+            app.key('o', ctrl=True)
+            provider = native_chooser(data_home)
+            assert 'nautilus' in provider.lower(), provider
+            assert app.editor('return editor.getText()') == ''
+            passed('abrir documentos usa o explorador do GNOME pelo portal e permite cancelar')
             app.call('/window/rect', {'width': 980, 'height': 660})
             wait(lambda: app.js('return [innerWidth,innerHeight]') == [980, 660], 'redimensionar antes de fechar')
             app.click('[aria-label="Fechar aplicativo"]')
@@ -319,7 +349,8 @@ def main():
             app.editor('editor.commands.setContent(arguments[0]); return true', rich)
             app.key('s', ctrl=True)
             note_path = downloads / 'Entre as linhas.md'
-            native_chooser(data_home, note_path)
+            provider = native_chooser(data_home, note_path)
+            assert 'nautilus' in provider.lower(), provider
             wait(note_path.exists, 'salvar documento no disco')
             wait(lambda: len(app.ipc('load_library')['documents']) == 1, 'registrar documento')
             library = app.ipc('load_library')
@@ -463,8 +494,9 @@ def main():
             assert not note_path.with_suffix('.assets').exists()
             app.key('s', ctrl=True)
             wait(lambda: note_path.with_suffix('.assets').exists(), 'gravar recursos relativos')
+            wait(lambda: 'Entre%20as%20linhas.assets/' in note_path.read_text(), 'concluir gravação do Markdown com imagens')
             assert 'data:image' not in note_path.read_text()
-            assert 'Entre%20as%20linhas.assets/' in note_path.read_text()
+            assert 'Entre%20as%20linhas.assets/' in note_path.read_text(), note_path.read_text()
             passed('imagens em memória até salvar e referências relativas reais')
             app.click('[aria-label="Configurações"]')
             for theme, label in [('light', 'Claro'), ('dark', 'Escuro'), ('sepia', 'Sépia Noturno')]:

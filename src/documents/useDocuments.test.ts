@@ -3,11 +3,16 @@ import { Editor } from '@tiptap/core'
 import { useDocuments } from './useDocuments'
 import { backend } from '../native/api'
 import { save } from '@tauri-apps/plugin-dialog'
+import { documentDir } from '@tauri-apps/api/path'
 import { createNote } from '../core/notes'
 import { defaultPreferences } from '../core/preferences'
 import { editorExtensions } from '../editor/extensions'
 
 vi.mock('@tauri-apps/plugin-dialog', () => ({ open: vi.fn(), save: vi.fn() }))
+vi.mock('@tauri-apps/api/path', () => ({
+  documentDir: vi.fn().mockResolvedValue('/tmp/Documentos'),
+  join: vi.fn().mockImplementation(async (...parts: string[]) => parts.join('/')),
+}))
 vi.mock('../native/api', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../native/api')>()),
   backend: { save: vi.fn(), read: vi.fn(), rename: vi.fn() },
@@ -41,6 +46,17 @@ function setup(format: 'md' | 'txt' = 'md') {
 
 beforeEach(() => vi.clearAllMocks())
 
+it('permite salvar quando a pasta Documentos não está configurada', async () => {
+  const { note, editor, hook } = setup()
+  vi.mocked(documentDir).mockRejectedValueOnce(new Error('Sem pasta Documentos'))
+  await act(async () => {
+    expect(await hook.result.current.saveNote(note.id)).toBe(true)
+  })
+  expect(save).toHaveBeenCalledWith(expect.objectContaining({ defaultPath: 'Sem título.md' }))
+  hook.unmount()
+  editor.destroy()
+})
+
 it('renomear um rascunho só muda a memória e o nome sugerido ao salvar', async () => {
   const { note, editor, options, hook } = setup()
   await act(async () => {
@@ -55,7 +71,9 @@ it('renomear um rascunho só muda a memória e o nome sugerido ao salvar', async
   await act(async () => {
     await hook.result.current.saveNote(note.id)
   })
-  expect(save).toHaveBeenCalledWith(expect.objectContaining({ defaultPath: 'Ideias novas.md' }))
+  expect(save).toHaveBeenCalledWith(
+    expect.objectContaining({ defaultPath: '/tmp/Documentos/Ideias novas.md' }),
+  )
   hook.unmount()
   editor.destroy()
 })

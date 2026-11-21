@@ -1,6 +1,7 @@
 import { useCallback, useRef, type Dispatch, type SetStateAction, type RefObject } from 'react'
 import type { Editor, JSONContent } from '@tiptap/core'
 import { open, save } from '@tauri-apps/plugin-dialog'
+import { documentDir, join } from '@tauri-apps/api/path'
 import { createNote, hasFormatting, textFromDocument, updateNote } from '../core/notes'
 import { documentTitle, suggestedFilename } from '../core/titles'
 import type { Note, Preferences, RegisteredDocument } from '../core/types'
@@ -125,6 +126,7 @@ export function useDocuments(options: Options) {
       const selected = await open({
         title: 'Abrir documento',
         multiple: true,
+        defaultPath: await documentDir().catch(() => undefined),
         filters: [{ name: 'Documentos', extensions: ['md', 'markdown', 'txt'] }],
       })
       for (const path of Array.isArray(selected) ? selected : selected ? [selected] : [])
@@ -147,13 +149,21 @@ export function useDocuments(options: Options) {
     try {
       let path = note.path
       if (!path || saveAs) {
+        let defaultPath = note.path ?? suggestedFilename(note)
+        if (!note.path) {
+          try {
+            defaultPath = await join(await documentDir(), defaultPath)
+          } catch {
+            /* O seletor escolhe a pasta inicial se Documentos não estiver configurada. */
+          }
+        }
         const filters = [
           { name: 'Markdown (.md)', extensions: ['md'] },
           { name: 'Texto simples (.txt)', extensions: ['txt'] },
         ]
         path = await save({
           title: 'Salvar como',
-          defaultPath: note.path ?? suggestedFilename(note),
+          defaultPath,
           filters: note.format === 'txt' ? [...filters].reverse() : filters,
         })
         if (!path) return false
