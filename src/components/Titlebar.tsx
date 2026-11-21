@@ -13,14 +13,30 @@ export function Titlebar({
   onRename: () => void
   onError: (message: string) => void
 }) {
-  const run = (action: 'minimize' | 'toggleMaximize' | 'close') => {
+  const run = (action: 'minimize' | 'toggleMaximize' | 'close' | 'startDragging') => {
     if (isTauri())
       void getCurrentWindow()
         [action]()
         .catch((error) => onError(String(error)))
   }
   return (
-    <header className="titlebar chrome" data-tauri-drag-region="deep">
+    <header
+      className="titlebar chrome"
+      data-tauri-drag-region="false"
+      onMouseDown={(event) => {
+        if (
+          event.button !== 0 ||
+          (event.target instanceof Element &&
+            event.target.closest('button, a, input, select, textarea, [role="button"]')) ||
+          ![1, 2].includes(event.detail)
+        )
+          return
+        event.preventDefault()
+        event.stopPropagation()
+        // O segundo pressionamento trata o duplo clique sem disputar o arraste nativo.
+        run(event.detail === 2 ? 'toggleMaximize' : 'startDragging')
+      }}
+    >
       <div className="brand">
         <span>Entrelinhas</span>
       </div>
