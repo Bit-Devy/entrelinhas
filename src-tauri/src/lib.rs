@@ -1,16 +1,23 @@
 mod database;
 mod files;
+mod launch;
 mod models;
 mod rename;
 
 use models::*;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tauri::Manager;
+use tauri::{Emitter, Manager};
 
 struct AppState {
     database: PathBuf,
     write_lock: Arc<Mutex<()>>,
+}
+#[tauri::command]
+fn take_open_requests(
+    state: tauri::State<'_, launch::IncomingFiles>,
+) -> AppResult<Vec<launch::OpenRequest>> {
+    state.take()
 }
 async fn blocking<T: Send + 'static>(
     operation: impl FnOnce() -> AppResult<T> + Send + 'static,
@@ -145,7 +152,30 @@ async fn search_documents(
 }
 
 pub fn run() {
+    let incoming = launch::IncomingFiles::default();
+    incoming.enqueue(
+        std::env::args_os().skip(1),
+        &std::env::current_dir().unwrap_or_default(),
+    );
+    let sender = incoming.clone();
+    let single_instance =
+        tauri_plugin_single_instance::Builder::new().callback(move |app, arguments, cwd| {
+            sender.enqueue(
+                arguments.into_iter().skip(1).map(Into::into),
+                std::path::Path::new(&cwd),
+            );
+            let _ = app.emit("entrelinhas://open-files", ());
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        });
+    #[cfg(target_os = "linux")]
+    let single_instance = single_instance.dbus_id(launch::instance_id());
     tauri::Builder::default()
+        .manage(incoming)
+        .plugin(single_instance.build())
         .plugin(
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(
@@ -166,6 +196,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             load_library,
+            take_open_requests,
             save_preferences,
             read_document,
             save_document,

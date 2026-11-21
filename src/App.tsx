@@ -31,6 +31,7 @@ import { EditorPane } from './editor/EditorPane'
 import { ProjectAssignment } from './components/ProjectAssignment'
 import { Formatting } from './components/Formatting'
 import { WindowResize } from './native/WindowResize'
+import { useIncomingFiles } from './native/useIncomingFiles'
 import { Sidebar } from './components/Sidebar'
 import { LibrarySearch } from './components/LibrarySearch'
 import { FindBar } from './components/FindBar'
@@ -140,6 +141,17 @@ export default function App() {
     notify,
     refresh,
   })
+  const openIncoming = useCallback(
+    async (path: string) => {
+      setImmersive(false)
+      setMenu(false)
+      setFind(null)
+      setSelectionRect(null)
+      return fileOps.openPath(path)
+    },
+    [fileOps.openPath],
+  )
+  useIncomingFiles(preferencesLoaded && preferences.themeChosen, openIncoming, notify)
   const closeNote = useCallback(
     async (id: string) => {
       await fileOps.waitForSaves()

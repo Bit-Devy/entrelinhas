@@ -29,6 +29,10 @@ export function native<T>(command: string, args?: Record<string, unknown>): Prom
   return invoke<T>(command, args)
 }
 export const backend = {
+  takeOpenRequests: () =>
+    native<({ kind: 'file'; path: string } | { kind: 'error'; message: string })[]>(
+      'take_open_requests',
+    ),
   library: () => native<Library>('load_library'),
   preferences: (preferences: Preferences) => native<void>('save_preferences', { preferences }),
   read: (path: string) => native<ReadResult>('read_document', { path }),

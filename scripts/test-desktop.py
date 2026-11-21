@@ -57,8 +57,11 @@ class Desktop:
                     raise
                 time.sleep(.1)
 
-    def start(self, choose_theme=True):
-        result = self.request('/session', {'capabilities': {'alwaysMatch': {'tauri:options': {'application': str(self.application)}}}})
+    def start(self, choose_theme=True, launch_args=None):
+        options = {'application': str(self.application)}
+        if launch_args:
+            options['args'] = launch_args
+        result = self.request('/session', {'capabilities': {'alwaysMatch': {'tauri:options': options}}})
         self.session = result['sessionId']
         self.call('/timeouts', {'implicit': 3000})
         wait(lambda: self.js('return !!document.querySelector(".tiptap")?.editor'), 'editor inicial')
@@ -223,6 +226,14 @@ def main():
         (config_home / 'user-dirs.dirs').write_text(f'XDG_DOCUMENTS_DIR="{downloads}"\n', encoding='utf-8')
         port, native_port = free_port(), free_port()
         environment = {**os.environ, 'XDG_DATA_HOME': str(data_home), 'XDG_CONFIG_HOME': str(directory / 'config')}
+        applications = data_home / 'applications'
+        applications.mkdir(parents=True)
+        desktop_entry = applications / 'entrelinhas.desktop'
+        desktop_content = (root / 'src-tauri/resources/entrelinhas.desktop').read_text()
+        desktop_content = desktop_content.replace('Exec=entrelinhas %F', f'Exec="{(root / args.binary).resolve()}" %F')
+        desktop_entry.write_text(desktop_content)
+        subprocess.run(['desktop-file-validate', str(desktop_entry)], check=True, env=environment)
+        subprocess.run(['update-desktop-database', str(applications)], check=True, env=environment)
         log = (output.parent / 'desktop-driver.log').open('w')
         process = subprocess.Popen([driver, '--port', str(port), '--native-port', str(native_port), '--native-driver', native_driver], env=environment, stdout=log, stderr=log)
         app = Desktop(f'http://127.0.0.1:{port}', (root / args.binary).resolve())
@@ -628,6 +639,33 @@ def main():
             elapsed = time.monotonic() - started
             assert app.editor('return editor.getText().endsWith(" FIM")')
             passed(f'composição preserva atalhos; documento longo ({len(long_text) - 7} caracteres) em {elapsed:.2f}s')
+            for mime in ('text/markdown', 'text/plain'):
+                listing = subprocess.run(['gio', 'mime', mime], check=True, env=environment, capture_output=True, text=True).stdout
+                assert 'entrelinhas.desktop' in listing, listing
+            passed('registro MIME torna o Entrelinhas disponível em Abrir com para Markdown e TXT')
+            external_md = downloads / 'Arquivo externo ação 日本語.md'
+            external_txt = downloads / "Texto externo com 'aspas'.txt"
+            external_md.write_text('# Vindo do sistema\n\nConteúdo externo.', encoding='utf-8')
+            external_txt.write_text('**Texto simples** — 日本語\nSegunda linha.', encoding='utf-8')
+            before_editors = app.js('return document.querySelectorAll(".tiptap").length')
+            launched = subprocess.run(['gio', 'launch', str(desktop_entry), str(external_md), str(external_txt)], env=environment, capture_output=True, text=True, timeout=15)
+            assert launched.returncode == 0, launched.stderr
+            wait(lambda: app.editor('return editor.getText({blockSeparator:String.fromCharCode(10)})') == external_txt.read_text(), 'abrir TXT enviado pelo explorador na janela existente')
+            assert app.js('return document.querySelectorAll(".tiptap").length') == before_editors + 2
+            assert app.js('return [...document.querySelectorAll(".tiptap")].some(node=>node.editor?.getText().endsWith(" FIM"))'), 'Abrir pelo sistema deve preservar o rascunho em memória.'
+            subprocess.run(['gio', 'launch', str(desktop_entry), str(external_md)], check=True, env=environment, capture_output=True, timeout=15)
+            wait(lambda: app.editor('return editor.getText().includes("Vindo do sistema")'), 'ativar Markdown já aberto sem duplicar')
+            assert app.editor('return editor.getHTML().includes("<h1")')
+            assert app.js('return document.querySelectorAll(".tiptap").length') == before_editors + 2
+            passed('Abrir com recebe múltiplos arquivos na mesma janela, preserva rascunhos e evita duplicatas')
+            app.click('[aria-label="Fechar aplicativo"]')
+            time.sleep(.3)
+            app.stop()
+            app.start(launch_args=[str(external_txt), str(external_md)])
+            wait(lambda: app.editor('return editor.getText().includes("Vindo do sistema")'), 'abrir arquivos recebidos na inicialização')
+            assert app.js('return document.querySelectorAll(".tiptap").length') == 2
+            assert not app.js('return [...document.querySelectorAll(".tiptap")].some(node=>node.editor?.getText().endsWith(" FIM"))')
+            passed('inicialização com arquivos abre somente os documentos solicitados pelo sistema')
             app.click('[aria-label="Fechar aplicativo"]')
             time.sleep(.2)
             app.stop()
