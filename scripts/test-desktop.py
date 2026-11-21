@@ -643,12 +643,26 @@ def main():
                 listing = subprocess.run(['gio', 'mime', mime], check=True, env=environment, capture_output=True, text=True).stdout
                 assert 'entrelinhas.desktop' in listing, listing
             passed('registro MIME torna o Entrelinhas disponível em Abrir com para Markdown e TXT')
+            app.reveal()
+            app.click('[aria-label="Configurações"]')
+            app.js('return [...document.querySelectorAll(".settings-nav button")].find(button=>button.innerText==="Arquivos").click()')
+            wait(lambda: app.js('return !document.querySelector(".default-app").getAttribute("aria-busy") || document.querySelector(".default-app").getAttribute("aria-busy")==="false"'), 'consultar aplicativo padrão')
+            assert not app.ipc('default_app_status')['text']
+            assert not (config_home / 'mimeapps.list').exists(), 'Consultar a opção não deve mudar os padrões.'
+            app.js('return [...document.querySelectorAll(".default-app button")].find(button=>button.innerText==="Usar como padrão").click()')
+            wait(lambda: app.js('return document.querySelectorAll(".default-app-current").length') == 2, 'confirmar associações no sistema')
+            for mime in ('text/markdown', 'text/x-markdown', 'text/plain'):
+                default = subprocess.run(['gio', 'mime', mime], env=environment, check=True, capture_output=True, text=True).stdout.splitlines()[0]
+                assert default.endswith('entrelinhas.desktop'), (mime, default)
+            app.screenshot(output / 'default-app.png')
+            app.click('[aria-label="Fechar painel"]')
+            passed('configurações definem o padrão somente por escolha explícita e confirmam Markdown e TXT no sistema')
             external_md = downloads / 'Arquivo externo ação 日本語.md'
             external_txt = downloads / "Texto externo com 'aspas'.txt"
             external_md.write_text('# Vindo do sistema\n\nConteúdo externo.', encoding='utf-8')
             external_txt.write_text('**Texto simples** — 日本語\nSegunda linha.', encoding='utf-8')
             before_editors = app.js('return document.querySelectorAll(".tiptap").length')
-            launched = subprocess.run(['gio', 'launch', str(desktop_entry), str(external_md), str(external_txt)], env=environment, capture_output=True, text=True, timeout=15)
+            launched = subprocess.run(['gio', 'open', str(external_md), str(external_txt)], env=environment, capture_output=True, text=True, timeout=15)
             assert launched.returncode == 0, launched.stderr
             wait(lambda: app.editor('return editor.getText({blockSeparator:String.fromCharCode(10)})') == external_txt.read_text(), 'abrir TXT enviado pelo explorador na janela existente')
             assert app.js('return document.querySelectorAll(".tiptap").length') == before_editors + 2

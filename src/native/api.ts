@@ -13,6 +13,12 @@ export interface NativeError {
   code: string
   message: string
 }
+export interface DefaultAppStatus {
+  supported: boolean
+  registered: boolean
+  markdown: boolean
+  text: boolean
+}
 export function errorMessage(error: unknown): string {
   if (error && typeof error === 'object' && 'message' in error) return String(error.message)
   return String(error)
@@ -29,6 +35,8 @@ export function native<T>(command: string, args?: Record<string, unknown>): Prom
   return invoke<T>(command, args)
 }
 export const backend = {
+  defaultAppStatus: () => native<DefaultAppStatus>('default_app_status'),
+  setDefaultApp: () => native<DefaultAppStatus>('set_default_app'),
   takeOpenRequests: () =>
     native<({ kind: 'file'; path: string } | { kind: 'error'; message: string })[]>(
       'take_open_requests',

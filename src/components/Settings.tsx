@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { ThemeChoices } from './ThemeChoices'
 import { AppIcon } from './AppIcon'
+import { DefaultAppControl } from './DefaultAppControl'
 import { Modal } from './ui'
 import { Select } from './Select'
 import { eventShortcut } from '../core/shortcuts'
@@ -245,6 +246,7 @@ export function Settings({
                   }
                 />
               </label>
+              <DefaultAppControl />
               <div className="info-card">
                 Imagens ficam em memória até o salvamento. Ao salvar em Markdown, os recursos vão
                 para uma pasta ao lado do documento.

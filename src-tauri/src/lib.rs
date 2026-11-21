@@ -3,6 +3,7 @@ mod files;
 mod launch;
 mod models;
 mod rename;
+mod system_integration;
 
 use models::*;
 use std::path::PathBuf;
@@ -18,6 +19,14 @@ fn take_open_requests(
     state: tauri::State<'_, launch::IncomingFiles>,
 ) -> AppResult<Vec<launch::OpenRequest>> {
     state.take()
+}
+#[tauri::command]
+async fn default_app_status() -> AppResult<system_integration::DefaultAppStatus> {
+    blocking(system_integration::status).await
+}
+#[tauri::command]
+async fn set_default_app() -> AppResult<system_integration::DefaultAppStatus> {
+    blocking(system_integration::set_default).await
 }
 async fn blocking<T: Send + 'static>(
     operation: impl FnOnce() -> AppResult<T> + Send + 'static,
@@ -197,6 +206,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             load_library,
             take_open_requests,
+            default_app_status,
+            set_default_app,
             save_preferences,
             read_document,
             save_document,

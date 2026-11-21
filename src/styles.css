@@ -1273,6 +1273,64 @@ p {
   line-height: 1.8;
   margin: 20px 0;
 }
+.default-app {
+  margin-top: 24px;
+}
+.default-app h4 {
+  margin: 0 0 8px;
+  font-size: 13px;
+}
+.default-app > p {
+  line-height: 1.7;
+}
+.default-app-types {
+  list-style: none;
+  padding: 0;
+  margin: 18px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: left;
+}
+.default-app-types li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  font-size: 11px;
+}
+.default-app-types li + li {
+  border-top: 1px solid var(--border);
+}
+.default-app-types li > svg {
+  color: var(--muted);
+}
+.default-app-types strong,
+.default-app-types small {
+  display: block;
+}
+.default-app-types strong {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+.default-app-types small {
+  color: var(--muted);
+}
+.default-app-types li > span:last-child {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.default-app-current {
+  color: var(--accent);
+}
+.default-app-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
 .about {
   text-align: center;
   padding: 24px 0;
